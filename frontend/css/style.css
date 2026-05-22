@@ -936,3 +936,21 @@ body {
         width: 220px;
     }
 }
+/* Corrige rolagem da área de mensagens */
+.chat-container,
+.chat-ativo {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.chat-mensagens {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 32px;
+    scroll-behavior: smooth;
+}
+
+.chat-input-container {
+    flex-shrink: 0;
+}
