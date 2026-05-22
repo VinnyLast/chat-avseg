@@ -1827,3 +1827,175 @@ body.modal-aberto {
     height: 96px;
     object-fit: contain;
 }
+.sidebar-header {
+    padding: 22px 24px;
+}
+
+.sidebar-header .brand-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sidebar-header .brand-logo {
+    width: 46px;
+    height: 46px;
+    object-fit: contain;
+}
+
+.sidebar-header .brand-title span {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+.sidebar {
+    background: linear-gradient(180deg, #101010 0%, #0b0b0b 100%);
+    border-right: 1px solid rgba(245, 196, 0, 0.16);
+}
+
+.user-info {
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(245, 196, 0, 0.14);
+    border-radius: 14px;
+}
+
+.btn-logout {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+}
+
+.btn-logout:hover {
+    border-color: var(--yellow-border);
+    color: var(--primary);
+}
+.stats {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 20px 24px;
+}
+
+.stat-card {
+    min-height: auto;
+    padding: 18px 20px;
+    border-radius: 16px;
+    background: linear-gradient(145deg, #111111, #0c0c0c);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stat-number {
+    font-size: 34px;
+    line-height: 1;
+}
+
+.stat-label {
+    margin-top: 8px;
+    font-size: 14px;
+}
+.filter-btn {
+    border-radius: 12px;
+    margin-bottom: 6px;
+    padding: 13px 16px;
+    font-weight: 600;
+    transition: 0.2s ease;
+}
+
+.filter-btn:hover {
+    background: rgba(245, 196, 0, 0.08);
+    color: var(--primary);
+}
+
+.filter-btn.active {
+    background: linear-gradient(135deg, #f5c400, #ffd84a);
+    color: #050505;
+    box-shadow: 0 8px 20px rgba(245, 196, 0, 0.18);
+}
+.conversas-list {
+    background: #121212;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.conversas-header {
+    padding: 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+.conversas-header h2 {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.search-input {
+    height: 48px;
+    border-radius: 12px;
+    background: #0c0c0c;
+}
+
+.conversa-item {
+    padding: 18px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: 0.2s ease;
+}
+
+.conversa-item:hover {
+    background: rgba(245, 196, 0, 0.055);
+}
+
+.conversa-item.active {
+    background: linear-gradient(90deg, rgba(245, 196, 0, 0.16), rgba(245, 196, 0, 0.04));
+    border-left: 4px solid var(--primary);
+}
+
+.conversa-avatar {
+    width: 54px;
+    height: 54px;
+    font-size: 22px;
+    font-weight: 800;
+    box-shadow: 0 8px 18px rgba(245, 196, 0, 0.18);
+}.chat-vazio-content {
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid rgba(245, 196, 0, 0.12);
+    border-radius: 24px;
+    padding: 46px 56px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+}
+
+.chat-vazio-content svg {
+    width: 96px;
+    height: 96px;
+    color: var(--primary);
+    opacity: 0.32;
+    margin-bottom: 24px;
+}
+
+.chat-vazio-content h3 {
+    font-size: 26px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.chat-vazio-content p {
+    font-size: 16px;
+    color: var(--text-secondary);
+}.sidebar {
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(245, 196, 0, 0.24);
+    border-radius: 999px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.dashboard-container {
+    grid-template-columns: 320px 480px 1fr;
+}
