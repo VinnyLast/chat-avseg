@@ -326,9 +326,9 @@ app.get("/api/conversas/:id/mensagens", autenticar, (req, res) => {
 app.post("/api/conversas/:id/mensagens", autenticar, async (req, res) => {
   const { texto, tipo, arquivoUrl, mimeType, nomeArquivo } = req.body;
   
-  if (!texto) {
-    return res.status(400).json({ erro: "Texto é obrigatório" });
-  }
+  if (!texto && !arquivoUrl) {
+  return res.status(400).json({ erro: "Texto ou arquivo é obrigatório" });
+}
   
   const conversas = carregarDB(ARQUIVOS_DB.conversas);
   const conversa = conversas.find((c) => c.id === req.params.id);
@@ -339,16 +339,17 @@ app.post("/api/conversas/:id/mensagens", autenticar, async (req, res) => {
   
   const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
   
-  const novaMensagem = {
+ const novaMensagem = {
   id: gerarId(),
   conversaId: conversa.id,
   tipo: tipo || "texto",
-  texto: mensagem || "",
+  texto: texto || "",
   arquivoUrl: arquivoUrl || null,
   mimeType: mimeType || null,
   nomeArquivo: nomeArquivo || null,
-  origem: "cliente",
-  lida: false,
+  origem: "atendente",
+  usuarioId: req.usuario.id,
+  lida: true,
   criadoEm: new Date().toISOString(),
 };
   
@@ -499,18 +500,16 @@ app.post("/api/webhook/whatsapp", (req, res) => {
   
   salvarDB(ARQUIVOS_DB.conversas, conversas);
   
-  // Adicionar mensagem
   const novaMensagem = {
   id: gerarId(),
   conversaId: conversa.id,
   tipo: tipo || "texto",
-  texto,
+  texto: mensagem || "",
   arquivoUrl: arquivoUrl || null,
   mimeType: mimeType || null,
   nomeArquivo: nomeArquivo || null,
-  origem: "atendente",
-  usuarioId: req.usuario.id,
-  lida: true,
+  origem: "cliente",
+  lida: false,
   criadoEm: new Date().toISOString(),
 };
   
