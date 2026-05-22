@@ -1463,3 +1463,201 @@ body.modal-aberto {
         flex: 1;
     }
 }
+
+
+/* =============================================================================
+   ENVIO DE ARQUIVOS PELO ATENDENTE
+   ============================================================================= */
+
+.btn-input-action {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: #0f0f0f;
+    color: var(--primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.btn-input-action:hover {
+    background: var(--yellow-soft);
+    border-color: var(--yellow-border);
+    transform: translateY(-1px);
+}
+
+.btn-input-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.anexo-preview {
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    padding: 12px 24px 0;
+}
+
+.anexo-preview-card {
+    max-width: 520px;
+    display: grid;
+    grid-template-columns: 54px 1fr 34px;
+    align-items: center;
+    gap: 12px;
+    background: #0f0f0f;
+    border: 1px solid var(--yellow-border);
+    border-radius: 14px;
+    padding: 10px;
+}
+
+.anexo-preview-img {
+    width: 54px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+}
+
+.anexo-preview-icone {
+    width: 54px;
+    height: 54px;
+    border-radius: 10px;
+    background: var(--yellow-soft);
+    border: 1px solid var(--yellow-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+}
+
+.anexo-preview-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.anexo-preview-info strong {
+    color: var(--text-primary);
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.anexo-preview-info span {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.anexo-preview-remover {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.12);
+    color: #ff8a8a;
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+}
+
+.anexo-preview-remover:hover {
+    background: #ef4444;
+    color: white;
+}
+
+/* =============================================================================
+   RESPOSTAS RÁPIDAS / TEMPLATES
+   ============================================================================= */
+
+.templates-rapidos {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    bottom: 86px;
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 80;
+    background: #0f0f0f;
+    border: 1px solid var(--yellow-border);
+    border-radius: 16px;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.65);
+    padding: 10px;
+}
+
+.template-item {
+    width: 100%;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+    padding: 10px 12px;
+    border-radius: 12px;
+    transition: all 0.2s;
+    display: block;
+}
+
+.template-item:hover {
+    background: var(--yellow-soft);
+    border-color: var(--yellow-border);
+}
+
+.template-topo {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.template-topo strong {
+    font-size: 13px;
+    color: var(--primary);
+}
+
+.template-topo span {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 999px;
+}
+
+.template-item p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.35;
+}
+
+.template-vazio {
+    color: var(--text-secondary);
+    padding: 16px;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .templates-rapidos {
+        left: 12px;
+        right: 12px;
+        bottom: 80px;
+    }
+
+    .chat-input-container {
+        gap: 8px;
+        padding: 12px;
+    }
+
+    .btn-input-action {
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
+    }
+}

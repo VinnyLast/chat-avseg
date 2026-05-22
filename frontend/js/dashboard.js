@@ -31,10 +31,34 @@ const btnEnviar = document.getElementById("btnEnviar");
 const chatAtendenteInfo = document.getElementById("chatAtendenteInfo");
 const btnFinalizarConversa = document.getElementById("btnFinalizarConversa");
 const btnReabrirConversa = document.getElementById("btnReabrirConversa");
+const btnAnexar = document.getElementById("btnAnexar");
+const fileAnexo = document.getElementById("fileAnexo");
+const anexoPreview = document.getElementById("anexoPreview");
+const btnTemplates = document.getElementById("btnTemplates");
+const templatesRapidos = document.getElementById("templatesRapidos");
+
+let arquivoSelecionado = null;
+
+const TEMPLATES_RAPIDOS = [
+  { atalho: "/ola", titulo: "Saudação", texto: "Olá, tudo bem? Sou da equipe AVSEG. Como posso te ajudar?" },
+  { atalho: "/cpf", titulo: "Pedir CPF ou placa", texto: "Me informe CPF ou placa do veículo, por favor." },
+  { atalho: "/verificar", titulo: "Verificando", texto: "Vou verificar para você." },
+  { atalho: "/finalizar", titulo: "Finalizar atendimento", texto: "Seu atendimento foi finalizado. A AVSEG agradece!" },
+  { atalho: "/atraso", titulo: "Pagamento em atraso", texto: "Olá, boa tarde! Devido ao atraso, será necessário realizar o pagamento em atraso." },
+  { atalho: "/pix", titulo: "Pagamento via PIX", texto: "Para pagar com PIX, é necessário selecionar e copiar a chave informada no boleto." },
+  { atalho: "/detalhes", titulo: "Pedir detalhes", texto: "Gostaríamos de entender melhor sua solicitação. Poderia nos passar mais detalhes?" },
+  { atalho: "/setor", titulo: "Encaminhar setor", texto: "Encaminhei sua solicitação para o setor responsável. Peço que aguarde um momento." }
+];
 
 function authHeaders() {
   return {
     "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+}
+
+function authHeadersSemJson() {
+  return {
     Authorization: `Bearer ${token}`,
   };
 }
@@ -389,10 +413,172 @@ function rolarParaBaixo() {
   chatMensagens.scrollTop = chatMensagens.scrollHeight;
 }
 
+
+function detectarTipoArquivo(file) {
+  const mime = file?.type || "";
+
+  if (mime.startsWith("image/")) return "imagem";
+  if (mime.startsWith("audio/")) return "audio";
+  if (mime.startsWith("video/")) return "video";
+
+  return "arquivo";
+}
+
+function formatarTamanhoArquivo(bytes = 0) {
+  if (!bytes) return "";
+
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function selecionarArquivo(e) {
+  const file = e.target.files?.[0];
+
+  if (!file) return;
+
+  const limiteMB = 25;
+  if (file.size > limiteMB * 1024 * 1024) {
+    alert(`Arquivo muito grande. Limite atual: ${limiteMB}MB.`);
+    fileAnexo.value = "";
+    return;
+  }
+
+  arquivoSelecionado = file;
+  renderizarPreviewAnexo();
+}
+
+function limparAnexo() {
+  arquivoSelecionado = null;
+
+  if (fileAnexo) {
+    fileAnexo.value = "";
+  }
+
+  if (anexoPreview) {
+    anexoPreview.style.display = "none";
+    anexoPreview.innerHTML = "";
+  }
+}
+
+function renderizarPreviewAnexo() {
+  if (!anexoPreview || !arquivoSelecionado) return;
+
+  const tipo = detectarTipoArquivo(arquivoSelecionado);
+  const icone = iconeArquivo(arquivoSelecionado.type, arquivoSelecionado.name);
+  let preview = "";
+
+  if (tipo === "imagem") {
+    const url = URL.createObjectURL(arquivoSelecionado);
+    preview = `<img src="${url}" alt="Preview" class="anexo-preview-img">`;
+  } else {
+    preview = `<div class="anexo-preview-icone">${icone}</div>`;
+  }
+
+  anexoPreview.innerHTML = `
+    <div class="anexo-preview-card">
+      ${preview}
+      <div class="anexo-preview-info">
+        <strong>${escaparHTML(arquivoSelecionado.name)}</strong>
+        <span>${escaparHTML(arquivoSelecionado.type || "Arquivo")} • ${formatarTamanhoArquivo(arquivoSelecionado.size)}</span>
+      </div>
+      <button type="button" class="anexo-preview-remover" onclick="limparAnexo()">×</button>
+    </div>
+  `;
+
+  anexoPreview.style.display = "block";
+}
+
+async function uploadArquivoSelecionado() {
+  if (!arquivoSelecionado) return null;
+
+  const formData = new FormData();
+  formData.append("arquivo", arquivoSelecionado);
+
+  const resposta = await fetch(`${API_URL}/api/upload`, {
+    method: "POST",
+    headers: authHeadersSemJson(),
+    body: formData,
+  });
+
+  const dados = await resposta.json();
+
+  if (!resposta.ok) {
+    throw new Error(dados.erro || "Erro ao enviar arquivo.");
+  }
+
+  return dados;
+}
+
+function renderizarTemplatesRapidos(filtro = "") {
+  if (!templatesRapidos) return;
+
+  const termo = filtro.toLowerCase().replace(/^\//, "");
+
+  const lista = TEMPLATES_RAPIDOS.filter((template) => {
+    if (!termo) return true;
+
+    return (
+      template.atalho.toLowerCase().includes(termo) ||
+      template.titulo.toLowerCase().includes(termo) ||
+      template.texto.toLowerCase().includes(termo)
+    );
+  });
+
+  if (!lista.length) {
+    templatesRapidos.innerHTML = `<div class="template-vazio">Nenhuma resposta rápida encontrada.</div>`;
+    templatesRapidos.style.display = "block";
+    return;
+  }
+
+  templatesRapidos.innerHTML = lista
+    .map(
+      (template) => `
+        <button type="button" class="template-item" data-atalho="${template.atalho}">
+          <div class="template-topo">
+            <strong>${escaparHTML(template.titulo)}</strong>
+            <span>${escaparHTML(template.atalho)}</span>
+          </div>
+          <p>${escaparHTML(template.texto)}</p>
+        </button>
+      `
+    )
+    .join("");
+
+  templatesRapidos.style.display = "block";
+}
+
+function esconderTemplatesRapidos() {
+  if (!templatesRapidos) return;
+
+  templatesRapidos.style.display = "none";
+}
+
+function inserirTemplate(atalho) {
+  const template = TEMPLATES_RAPIDOS.find((item) => item.atalho === atalho);
+
+  if (!template) return;
+
+  const valorAtual = chatInput.value.trim();
+
+  if (valorAtual.startsWith("/")) {
+    chatInput.value = template.texto;
+  } else if (valorAtual) {
+    chatInput.value = `${valorAtual}\n${template.texto}`;
+  } else {
+    chatInput.value = template.texto;
+  }
+
+  esconderTemplatesRapidos();
+  ajustarAlturaTextarea();
+  chatInput.focus();
+}
+
 async function enviarMensagem() {
   const texto = chatInput.value.trim();
 
-  if (!texto || !conversaAtual) return;
+  if ((!texto && !arquivoSelecionado) || !conversaAtual) return;
 
   if (conversaAtual.status === "finalizada") {
     alert("Esta conversa está finalizada. Reabra antes de responder.");
@@ -401,12 +587,31 @@ async function enviarMensagem() {
 
   btnEnviar.disabled = true;
   chatInput.disabled = true;
+  btnAnexar && (btnAnexar.disabled = true);
+  btnTemplates && (btnTemplates.disabled = true);
 
   try {
+    let arquivo = null;
+
+    if (arquivoSelecionado) {
+      arquivo = await uploadArquivoSelecionado();
+    }
+
+    const payload = {
+      texto,
+    };
+
+    if (arquivo) {
+      payload.tipo = arquivo.tipo;
+      payload.arquivoUrl = arquivo.arquivoUrl;
+      payload.mimeType = arquivo.mimeType;
+      payload.nomeArquivo = arquivo.nomeArquivo;
+    }
+
     const resposta = await fetch(`${API_URL}/api/conversas/${conversaAtual.id}/mensagens`, {
       method: "POST",
       headers: authHeaders(),
-      body: JSON.stringify({ texto }),
+      body: JSON.stringify(payload),
     });
 
     const dados = await resposta.json();
@@ -417,12 +622,14 @@ async function enviarMensagem() {
     }
 
     chatInput.value = "";
+    limparAnexo();
+    esconderTemplatesRapidos();
     ajustarAlturaTextarea();
 
     await carregarConversas();
   } catch (erro) {
     console.error("Erro ao enviar mensagem:", erro);
-    alert("Erro de conexão ao enviar mensagem.");
+    alert(erro.message || "Erro de conexão ao enviar mensagem.");
   } finally {
     atualizarBotoesConversa(conversaAtual);
     if (conversaAtual?.status !== "finalizada") {
@@ -545,6 +752,8 @@ function atualizarBotoesConversa(conversa) {
 
   chatInput.disabled = finalizada;
   btnEnviar.disabled = finalizada;
+  if (btnAnexar) btnAnexar.disabled = finalizada;
+  if (btnTemplates) btnTemplates.disabled = finalizada;
   chatInput.placeholder = finalizada
     ? "Conversa finalizada. Reabra para responder."
     : "Digite sua mensagem...";
@@ -799,7 +1008,26 @@ async function excluirAtendente(id, nome) {
 function configurarEventos() {
   btnSair.addEventListener("click", sair);
   btnEnviar.addEventListener("click", enviarMensagem);
-  chatInput.addEventListener("input", ajustarAlturaTextarea);
+  chatInput.addEventListener("input", () => {
+    ajustarAlturaTextarea();
+
+    const valor = chatInput.value.trim();
+    if (valor.startsWith("/")) {
+      renderizarTemplatesRapidos(valor);
+    } else {
+      esconderTemplatesRapidos();
+    }
+  });
+
+  btnAnexar?.addEventListener("click", () => fileAnexo?.click());
+  fileAnexo?.addEventListener("change", selecionarArquivo);
+  btnTemplates?.addEventListener("click", () => {
+    if (templatesRapidos?.style.display === "block") {
+      esconderTemplatesRapidos();
+    } else {
+      renderizarTemplatesRapidos("");
+    }
+  });
 
   chatInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -873,6 +1101,18 @@ function configurarEventos() {
 
     if (btnExcluir) {
       excluirAtendente(btnExcluir.dataset.id, btnExcluir.dataset.nome);
+      return;
+    }
+
+    const templateItem = e.target.closest(".template-item");
+
+    if (templateItem) {
+      inserirTemplate(templateItem.dataset.atalho);
+      return;
+    }
+
+    if (templatesRapidos && !templatesRapidos.contains(e.target) && e.target !== btnTemplates && e.target !== chatInput) {
+      esconderTemplatesRapidos();
     }
   });
 

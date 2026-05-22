@@ -6,6 +6,7 @@ backend/.env
 frontend/.env
 
 backend/database/
+backend/uploads/
 
 logs/
 *.log

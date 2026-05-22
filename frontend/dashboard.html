@@ -123,10 +123,24 @@
                 </div>
                 
                 <!-- Input de mensagem -->
+                <div id="anexoPreview" class="anexo-preview" style="display: none;"></div>
+
+                <div id="templatesRapidos" class="templates-rapidos" style="display: none;"></div>
+
                 <div class="chat-input-container">
+                    <input type="file" id="fileAnexo" style="display: none;" />
+
+                    <button id="btnAnexar" class="btn-input-action" type="button" title="Anexar arquivo">
+                        📎
+                    </button>
+
+                    <button id="btnTemplates" class="btn-input-action" type="button" title="Respostas rápidas">
+                        ⚡
+                    </button>
+
                     <textarea 
                         id="chatInput" 
-                        placeholder="Digite sua mensagem..."
+                        placeholder="Digite sua mensagem... ou / para respostas rápidas"
                         rows="1"
                     ></textarea>
                     <button id="btnEnviar" class="btn-enviar">
