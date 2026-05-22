@@ -452,6 +452,92 @@ app.patch("/api/conversas/:id", autenticar, async (req, res) => {
   res.json(conversaAtualizada);
 });
 
+
+// Transferir conversa para outro atendente
+app.patch("/api/conversas/:id/transferir", autenticar, (req, res) => {
+  const { atendenteId } = req.body;
+
+  if (!atendenteId) {
+    return res.status(400).json({ erro: "Informe o atendente de destino." });
+  }
+
+  if (atendenteId === req.usuario.id) {
+    return res.status(400).json({ erro: "Você não pode transferir a conversa para você mesmo." });
+  }
+
+  const conversas = carregarDB(ARQUIVOS_DB.conversas);
+  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
+  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
+
+  const indice = conversas.findIndex((c) => c.id === req.params.id);
+
+  if (indice === -1) {
+    return res.status(404).json({ erro: "Conversa não encontrada" });
+  }
+
+  const conversa = conversas[indice];
+
+  if (conversa.status === "finalizada") {
+    return res.status(400).json({
+      erro: "Esta conversa está finalizada. Reabra antes de transferir.",
+    });
+  }
+
+  const usuarioLogado = usuarios.find((u) => u.id === req.usuario.id && u.ativo !== false);
+  const destino = usuarios.find((u) => u.id === atendenteId && u.ativo !== false);
+
+  if (!destino) {
+    return res.status(404).json({ erro: "Atendente de destino não encontrado." });
+  }
+
+  const podeTransferir =
+    usuarioLogado?.role === "admin" ||
+    !conversa.atendenteId ||
+    conversa.atendenteId === req.usuario.id;
+
+  if (!podeTransferir) {
+    const atendenteAtual = usuarios.find((u) => u.id === conversa.atendenteId);
+
+    return res.status(403).json({
+      erro: `Somente administrador ou o atendente responsável (${atendenteAtual?.nome || "atual"}) pode transferir esta conversa.`,
+    });
+  }
+
+  const atendenteAnterior = usuarios.find((u) => u.id === conversa.atendenteId);
+
+  conversa.atendenteId = destino.id;
+  conversa.status = "em_atendimento";
+  conversa.finalizadaEm = null;
+  conversa.atualizadoEm = new Date().toISOString();
+
+  const mensagemSistema = {
+    id: gerarId(),
+    conversaId: conversa.id,
+    tipo: "sistema",
+    texto: `Conversa transferida ${atendenteAnterior?.nome ? `de ${atendenteAnterior.nome} ` : ""}para ${destino.nome}.`,
+    origem: "sistema",
+    usuarioId: req.usuario.id,
+    lida: true,
+    criadoEm: new Date().toISOString(),
+  };
+
+  mensagens.push(mensagemSistema);
+
+  salvarDB(ARQUIVOS_DB.conversas, conversas);
+  salvarDB(ARQUIVOS_DB.mensagens, mensagens);
+
+  const conversaAtualizada = montarConversaDetalhada(conversa, mensagens, usuarios);
+
+  io.emit("nova_mensagem", {
+    conversaId: conversa.id,
+    mensagem: mensagemSistema,
+  });
+
+  io.emit("conversa_atualizada", conversaAtualizada);
+
+  res.json(conversaAtualizada);
+});
+
 // =============================================================================
 // ROTAS DE MENSAGENS
 // =============================================================================
@@ -584,6 +670,18 @@ app.patch("/api/conversas/:id/mensagens/marcar-lidas", autenticar, (req, res) =>
 app.get("/api/clientes", autenticar, (req, res) => {
   const clientes = carregarDB(ARQUIVOS_DB.clientes);
   res.json(clientes);
+});
+
+
+// Listar atendentes ativos para transferência
+app.get("/api/usuarios/atendentes", autenticar, (req, res) => {
+  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
+
+  const atendentes = usuarios
+    .filter((u) => u.ativo !== false)
+    .map(({ senha, ...usuario }) => usuario);
+
+  res.json(atendentes);
 });
 
 // =============================================================================

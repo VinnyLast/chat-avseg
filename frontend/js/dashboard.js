@@ -31,6 +31,7 @@ const btnEnviar = document.getElementById("btnEnviar");
 const chatAtendenteInfo = document.getElementById("chatAtendenteInfo");
 const btnFinalizarConversa = document.getElementById("btnFinalizarConversa");
 const btnReabrirConversa = document.getElementById("btnReabrirConversa");
+const btnTransferirConversa = document.getElementById("btnTransferirConversa");
 const btnAnexar = document.getElementById("btnAnexar");
 const fileAnexo = document.getElementById("fileAnexo");
 const anexoPreview = document.getElementById("anexoPreview");
@@ -332,7 +333,7 @@ function iconeArquivo(mimeType = "", nomeArquivo = "") {
 }
 function adicionarMensagemNaTela(mensagem) {
   const div = document.createElement("div");
-  div.className = `mensagem ${mensagem.origem === "atendente" ? "atendente" : "cliente"}`;
+  div.className = `mensagem ${mensagem.origem === "atendente" ? "atendente" : mensagem.origem === "sistema" ? "sistema" : "cliente"}`;
 
   const tipo = mensagem.tipo || "texto";
   const arquivoUrl = mensagem.arquivoUrl || "";
@@ -395,6 +396,8 @@ function adicionarMensagemNaTela(mensagem) {
 
       ${mensagem.texto ? `<p class="mensagem-texto legenda-midia">${escaparHTML(mensagem.texto)}</p>` : ""}
     `;
+  } else if (tipo === "sistema" || mensagem.origem === "sistema") {
+    conteudo = `<p class="mensagem-texto mensagem-sistema-texto">${escaparHTML(mensagem.texto || "")}</p>`;
   } else {
     conteudo = `<p class="mensagem-texto">${escaparHTML(mensagem.texto || "")}</p>`;
   }
@@ -750,6 +753,10 @@ function atualizarBotoesConversa(conversa) {
     btnAtribuir.style.display = finalizada ? "none" : "inline-flex";
   }
 
+  if (btnTransferirConversa) {
+    btnTransferirConversa.style.display = finalizada ? "none" : "inline-flex";
+  }
+
   chatInput.disabled = finalizada;
   btnEnviar.disabled = finalizada;
   if (btnAnexar) btnAnexar.disabled = finalizada;
@@ -774,6 +781,128 @@ async function reabrirConversa() {
   await atualizarStatus("aguardando");
 }
 
+
+
+function abrirModalTransferir() {
+  const modal = document.getElementById("modalTransferir");
+  if (!modal || !conversaAtual) return;
+
+  modal.style.display = "flex";
+  carregarAtendentesTransferencia();
+}
+
+function fecharModalTransferir() {
+  const modal = document.getElementById("modalTransferir");
+  const erro = document.getElementById("erroTransferir");
+
+  if (modal) modal.style.display = "none";
+  if (erro) {
+    erro.textContent = "";
+    erro.style.display = "none";
+  }
+}
+
+function mostrarErroTransferir(mensagem) {
+  const erro = document.getElementById("erroTransferir");
+  if (!erro) return;
+
+  erro.textContent = mensagem;
+  erro.style.display = "block";
+}
+
+async function carregarAtendentesTransferencia() {
+  const lista = document.getElementById("listaTransferirAtendentes");
+  if (!lista) return;
+
+  lista.innerHTML = `<div class="loading">Carregando atendentes...</div>`;
+
+  try {
+    const resposta = await fetch(`${API_URL}/api/usuarios/atendentes`, {
+      headers: authHeaders(),
+    });
+
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+      lista.innerHTML = `<div class="loading">${dados.erro || "Erro ao carregar atendentes."}</div>`;
+      return;
+    }
+
+    const atendentes = dados.filter((atendente) => atendente.id !== usuario?.id);
+
+    if (!atendentes.length) {
+      lista.innerHTML = `<div class="loading">Nenhum outro atendente disponível.</div>`;
+      return;
+    }
+
+    lista.innerHTML = atendentes
+      .map((atendente) => {
+        const responsavelAtual = conversaAtual?.atendenteId === atendente.id;
+
+        return `
+          <button type="button" class="transferir-atendente-item" data-id="${atendente.id}" data-nome="${escaparHTML(atendente.nome || atendente.email)}">
+            <div class="atendente-avatar">
+              ${primeiraLetraUsuario(atendente.nome, atendente.email)}
+            </div>
+
+            <div class="transferir-atendente-info">
+              <strong>${escaparHTML(atendente.nome || "Sem nome")}</strong>
+              <span>${escaparHTML(atendente.email || "")}</span>
+            </div>
+
+            <div class="transferir-atendente-meta">
+              <span class="atendente-role ${atendente.role}">
+                ${atendente.role === "admin" ? "Admin" : "Atendente"}
+              </span>
+              ${responsavelAtual ? `<small>Responsável atual</small>` : ""}
+            </div>
+          </button>
+        `;
+      })
+      .join("");
+  } catch (erro) {
+    console.error("Erro ao carregar atendentes para transferência:", erro);
+    lista.innerHTML = `<div class="loading">Erro de conexão ao carregar atendentes.</div>`;
+  }
+}
+
+async function transferirConversa(atendenteId, nome) {
+  if (!conversaAtual || !atendenteId) return;
+
+  const confirmar = confirm(`Transferir esta conversa para ${nome}?`);
+  if (!confirmar) return;
+
+  try {
+    const resposta = await fetch(`${API_URL}/api/conversas/${conversaAtual.id}/transferir`, {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify({ atendenteId }),
+    });
+
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+      mostrarErroTransferir(dados.erro || "Erro ao transferir conversa.");
+      return;
+    }
+
+    conversas = conversas.map((c) =>
+      c.id === dados.id ? { ...c, ...dados } : c
+    );
+
+    conversaAtual = { ...conversaAtual, ...dados };
+    chatStatus.value = conversaAtual.status;
+
+    atualizarInfoAtendente(conversaAtual);
+    atualizarBotoesConversa(conversaAtual);
+    renderizarConversas();
+    atualizarEstatisticas();
+    fecharModalTransferir();
+  } catch (erro) {
+    console.error("Erro ao transferir conversa:", erro);
+    mostrarErroTransferir("Erro de conexão ao transferir conversa.");
+  }
+}
 
 function ajustarAlturaTextarea() {
   chatInput.style.height = "auto";
@@ -1043,6 +1172,7 @@ function configurarEventos() {
   btnAtribuir.addEventListener("click", assumirConversa);
   btnFinalizarConversa?.addEventListener("click", finalizarConversa);
   btnReabrirConversa?.addEventListener("click", reabrirConversa);
+  btnTransferirConversa?.addEventListener("click", abrirModalTransferir);
 
   searchConversas.addEventListener("input", (e) => {
     buscaAtual = e.target.value;
@@ -1078,14 +1208,23 @@ function configurarEventos() {
   const btnFecharAtendentes = document.getElementById("btnFecharAtendentes");
   const modalAtendentes = document.getElementById("modalAtendentes");
   const formNovoAtendente = document.getElementById("formNovoAtendente");
+  const modalTransferir = document.getElementById("modalTransferir");
+  const btnFecharTransferir = document.getElementById("btnFecharTransferir");
 
   btnAbrirAtendentes?.addEventListener("click", abrirModalAtendentes);
   btnFecharAtendentes?.addEventListener("click", fecharModalAtendentes);
   formNovoAtendente?.addEventListener("submit", criarAtendente);
+  btnFecharTransferir?.addEventListener("click", fecharModalTransferir);
 
   modalAtendentes?.addEventListener("click", (e) => {
     if (e.target === modalAtendentes) {
       fecharModalAtendentes();
+    }
+  });
+
+  modalTransferir?.addEventListener("click", (e) => {
+    if (e.target === modalTransferir) {
+      fecharModalTransferir();
     }
   });
 
@@ -1101,6 +1240,13 @@ function configurarEventos() {
 
     if (btnExcluir) {
       excluirAtendente(btnExcluir.dataset.id, btnExcluir.dataset.nome);
+      return;
+    }
+
+    const btnTransferirAtendente = e.target.closest(".transferir-atendente-item");
+
+    if (btnTransferirAtendente) {
+      transferirConversa(btnTransferirAtendente.dataset.id, btnTransferirAtendente.dataset.nome);
       return;
     }
 
@@ -1120,6 +1266,7 @@ function configurarEventos() {
     if (e.key === "Escape") {
       fecharModalImagem();
       fecharModalAtendentes();
+      fecharModalTransferir();
     }
   });
 }

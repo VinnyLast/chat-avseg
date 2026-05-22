@@ -1661,3 +1661,114 @@ body.modal-aberto {
         font-size: 16px;
     }
 }
+
+
+/* =============================================================================
+   TRANSFERÊNCIA DE CONVERSA
+   ============================================================================= */
+
+.btn-transferir {
+    background: rgba(59, 130, 246, 0.12);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.btn-transferir:hover {
+    background: #3b82f6;
+    color: white;
+}
+
+.modal-transferir-card {
+    max-width: 640px;
+}
+
+.lista-transferir-atendentes {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.transferir-atendente-item {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 42px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    background: #0f0f0f;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text-primary);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+}
+
+.transferir-atendente-item:hover {
+    border-color: var(--yellow-border);
+    background: var(--yellow-soft);
+    transform: translateY(-1px);
+}
+
+.transferir-atendente-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.transferir-atendente-info strong {
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.transferir-atendente-info span {
+    font-size: 12px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.transferir-atendente-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+}
+
+.transferir-atendente-meta small {
+    color: var(--primary);
+    font-size: 11px;
+}
+
+.mensagem.sistema {
+    align-self: center;
+    max-width: 90%;
+}
+
+.mensagem.sistema .mensagem-conteudo {
+    background: rgba(245, 196, 0, 0.10);
+    color: var(--primary);
+    border: 1px dashed var(--yellow-border);
+    box-shadow: none;
+    text-align: center;
+    padding: 8px 12px;
+}
+
+.mensagem-sistema-texto {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .transferir-atendente-item {
+        grid-template-columns: 42px 1fr;
+    }
+
+    .transferir-atendente-meta {
+        grid-column: 1 / -1;
+        align-items: flex-start;
+        flex-direction: row;
+    }
+}
