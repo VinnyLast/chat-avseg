@@ -862,3 +862,77 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--primary);
 }
+/* =============================================================================
+   MÍDIAS NAS MENSAGENS
+   ============================================================================= */
+
+.mensagem-midia {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mensagem-imagem {
+    max-width: 280px;
+    width: 100%;
+    max-height: 320px;
+    object-fit: cover;
+    border-radius: 14px;
+    display: block;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.mensagem-imagem:hover {
+    transform: scale(1.02);
+    opacity: 0.95;
+}
+
+.mensagem-audio {
+    width: 280px;
+    max-width: 100%;
+    display: block;
+    filter: invert(1);
+}
+
+.mensagem-arquivo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: inherit;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+}
+
+.mensagem-arquivo:hover {
+    border-color: var(--primary);
+}
+
+.legenda-midia {
+    margin-top: 8px;
+}
+
+/* Ajuste para bolha com imagem */
+.mensagem:has(.mensagem-imagem) .mensagem-conteudo,
+.mensagem:has(.mensagem-audio) .mensagem-conteudo {
+    padding: 10px;
+}
+
+/* Áudio enviado pelo atendente */
+.mensagem.atendente .mensagem-audio {
+    filter: none;
+}
+
+/* Responsivo para imagem/áudio */
+@media (max-width: 768px) {
+    .mensagem-imagem,
+    .mensagem-audio {
+        max-width: 220px;
+        width: 220px;
+    }
+}

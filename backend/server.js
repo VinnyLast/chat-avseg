@@ -324,7 +324,7 @@ app.get("/api/conversas/:id/mensagens", autenticar, (req, res) => {
 
 // Enviar mensagem
 app.post("/api/conversas/:id/mensagens", autenticar, async (req, res) => {
-  const { texto } = req.body;
+  const { texto, tipo, arquivoUrl, mimeType, nomeArquivo } = req.body;
   
   if (!texto) {
     return res.status(400).json({ erro: "Texto é obrigatório" });
@@ -440,11 +440,11 @@ app.post("/api/webhook/whatsapp", (req, res) => {
   if (INTERNAL_API_KEY && apiKey !== INTERNAL_API_KEY) {
     return res.status(401).json({ erro: "API key inválida" });
   }
-  const { telefone, mensagem, nomeCliente } = req.body;
+  const { telefone, mensagem, nomeCliente, tipo, arquivoUrl, mimeType, nomeArquivo } = req.body;
   
-  if (!telefone || !mensagem) {
-    return res.status(400).json({ erro: "Dados incompletos" });
-  }
+  if (!telefone || (!mensagem && !arquivoUrl)) {
+  return res.status(400).json({ erro: "Dados incompletos" });
+}
   
   const telefoneNormalizado = normalizarTelefone(telefone);
   
@@ -498,13 +498,18 @@ app.post("/api/webhook/whatsapp", (req, res) => {
   
   // Adicionar mensagem
   const novaMensagem = {
-    id: gerarId(),
-    conversaId: conversa.id,
-    texto: mensagem,
-    origem: "cliente",
-    lida: false,
-    criadoEm: new Date().toISOString(),
-  };
+  id: gerarId(),
+  conversaId: conversa.id,
+  tipo: tipo || "texto",
+  texto,
+  arquivoUrl: arquivoUrl || null,
+  mimeType: mimeType || null,
+  nomeArquivo: nomeArquivo || null,
+  origem: "atendente",
+  usuarioId: req.usuario.id,
+  lida: true,
+  criadoEm: new Date().toISOString(),
+};
   
   mensagens.push(novaMensagem);
   salvarDB(ARQUIVOS_DB.mensagens, mensagens);

@@ -164,7 +164,19 @@ function filtrarConversas() {
     return passaFiltro && passaBusca;
   });
 }
+function formatarUltimaMensagem(conversa) {
+  const texto = conversa.ultimaMensagem || "";
 
+  if (texto.toLowerCase().includes("áudio")) {
+    return "🎧 Áudio enviado";
+  }
+
+  if (texto.toLowerCase().includes("foto") || texto.toLowerCase().includes("imagem")) {
+    return "🖼️ Imagem enviada";
+  }
+
+  return texto || "Sem mensagens";
+}
 function renderizarConversas() {
   const lista = filtrarConversas();
 
@@ -201,7 +213,7 @@ function renderizarConversas() {
         </div>
 
         <div class="conversa-footer">
-          <p class="conversa-ultima-msg">${escaparHTML(conversa.ultimaMensagem || "Sem mensagens")}</p>
+          <p class="conversa-ultima-msg">${escaparHTML(formatarUltimaMensagem(conversa))}</p>
           ${badge}
         </div>
       </div>
@@ -272,9 +284,45 @@ function adicionarMensagemNaTela(mensagem) {
   const div = document.createElement("div");
   div.className = `mensagem ${mensagem.origem === "atendente" ? "atendente" : "cliente"}`;
 
+  const tipo = mensagem.tipo || "texto";
+  let conteudo = "";
+
+  if (tipo === "imagem" && mensagem.arquivoUrl) {
+    conteudo = `
+      <div class="mensagem-midia">
+        <img 
+          src="${mensagem.arquivoUrl}" 
+          alt="Imagem enviada" 
+          class="mensagem-imagem"
+          onclick="window.open('${mensagem.arquivoUrl}', '_blank')"
+        >
+      </div>
+      ${mensagem.texto ? `<p class="mensagem-texto legenda-midia">${escaparHTML(mensagem.texto)}</p>` : ""}
+    `;
+  } else if (tipo === "audio" && mensagem.arquivoUrl) {
+    conteudo = `
+      <div class="mensagem-midia">
+        <audio controls class="mensagem-audio">
+          <source src="${mensagem.arquivoUrl}" type="${mensagem.mimeType || "audio/mpeg"}">
+          Seu navegador não suporta áudio.
+        </audio>
+      </div>
+      ${mensagem.texto ? `<p class="mensagem-texto legenda-midia">${escaparHTML(mensagem.texto)}</p>` : ""}
+    `;
+  } else if (tipo === "arquivo" && mensagem.arquivoUrl) {
+    conteudo = `
+      <a href="${mensagem.arquivoUrl}" target="_blank" class="mensagem-arquivo">
+        📎 ${escaparHTML(mensagem.nomeArquivo || "Abrir arquivo")}
+      </a>
+      ${mensagem.texto ? `<p class="mensagem-texto legenda-midia">${escaparHTML(mensagem.texto)}</p>` : ""}
+    `;
+  } else {
+    conteudo = `<p class="mensagem-texto">${escaparHTML(mensagem.texto || "")}</p>`;
+  }
+
   div.innerHTML = `
     <div class="mensagem-conteudo">
-      <p class="mensagem-texto">${escaparHTML(mensagem.texto)}</p>
+      ${conteudo}
       <span class="mensagem-hora">${formatarHora(mensagem.criadoEm)}</span>
     </div>
   `;
