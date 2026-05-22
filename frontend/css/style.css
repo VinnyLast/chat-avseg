@@ -1370,3 +1370,96 @@ body.modal-aberto {
         justify-content: flex-end;
     }
 }
+/* =============================================================================
+   CONTROLE DE CONVERSA / ATENDENTE RESPONSÁVEL
+   ============================================================================= */
+
+.chat-atendente-info {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 3px;
+}
+
+.chat-atendente-info.com-atendente {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.conversa-atendente {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-chat-action {
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-finalizar {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ff8a8a;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.btn-finalizar:hover {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-reabrir {
+    background: var(--yellow-soft);
+    color: var(--primary);
+    border: 1px solid var(--yellow-border);
+}
+
+.btn-reabrir:hover {
+    background: var(--primary);
+    color: #050505;
+}
+
+#chatInput:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+#btnEnviar:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}
+
+@media (max-width: 768px) {
+    .chat-header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .chat-header-actions {
+        width: 100%;
+    }
+
+    .chat-header-actions button,
+    .chat-header-actions select {
+        flex: 1;
+    }
+}

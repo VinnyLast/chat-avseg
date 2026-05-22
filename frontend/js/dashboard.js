@@ -28,6 +28,9 @@ const btnAtribuir = document.getElementById("btnAtribuir");
 const chatMensagens = document.getElementById("chatMensagens");
 const chatInput = document.getElementById("chatInput");
 const btnEnviar = document.getElementById("btnEnviar");
+const chatAtendenteInfo = document.getElementById("chatAtendenteInfo");
+const btnFinalizarConversa = document.getElementById("btnFinalizarConversa");
+const btnReabrirConversa = document.getElementById("btnReabrirConversa");
 
 function authHeaders() {
   return {
@@ -152,8 +155,13 @@ function atualizarEstatisticas() {
 
 function filtrarConversas() {
   return conversas.filter((conversa) => {
-    const passaFiltro =
-      filtroAtual === "todas" || conversa.status === filtroAtual;
+    let passaFiltro = true;
+
+    if (filtroAtual === "minhas") {
+      passaFiltro = conversa.atendenteId === usuario?.id;
+    } else if (filtroAtual !== "todas") {
+      passaFiltro = conversa.status === filtroAtual;
+    }
 
     const termo = buscaAtual.toLowerCase();
     const passaBusca =
@@ -218,6 +226,8 @@ function renderizarConversas() {
           <p class="conversa-ultima-msg">${escaparHTML(formatarUltimaMensagem(conversa))}</p>
           ${badge}
         </div>
+
+        ${conversa.atendenteNome ? `<small class="conversa-atendente">👤 ${escaparHTML(conversa.atendenteNome)}</small>` : ""}
       </div>
 
       <div class="conversa-status ${conversa.status || "aguardando"}"></div>
@@ -247,6 +257,8 @@ async function abrirConversa(conversaId) {
   chatClienteNome.textContent = conversa.clienteNome || "Cliente";
   chatClienteTelefone.textContent = formatarTelefone(conversa.telefone);
   chatStatus.value = conversa.status || "aguardando";
+  atualizarInfoAtendente(conversa);
+  atualizarBotoesConversa(conversa);
 
   renderizarConversas();
 
@@ -382,6 +394,11 @@ async function enviarMensagem() {
 
   if (!texto || !conversaAtual) return;
 
+  if (conversaAtual.status === "finalizada") {
+    alert("Esta conversa está finalizada. Reabra antes de responder.");
+    return;
+  }
+
   btnEnviar.disabled = true;
   chatInput.disabled = true;
 
@@ -407,9 +424,10 @@ async function enviarMensagem() {
     console.error("Erro ao enviar mensagem:", erro);
     alert("Erro de conexão ao enviar mensagem.");
   } finally {
-    btnEnviar.disabled = false;
-    chatInput.disabled = false;
-    chatInput.focus();
+    atualizarBotoesConversa(conversaAtual);
+    if (conversaAtual?.status !== "finalizada") {
+      chatInput.focus();
+    }
   }
 }
 
@@ -449,6 +467,9 @@ async function atualizarStatus(status) {
     );
 
     conversaAtual = { ...conversaAtual, ...conversaAtualizada };
+    chatStatus.value = conversaAtual.status;
+    atualizarInfoAtendente(conversaAtual);
+    atualizarBotoesConversa(conversaAtual);
 
     renderizarConversas();
     atualizarEstatisticas();
@@ -465,14 +486,16 @@ async function assumirConversa() {
       method: "PATCH",
       headers: authHeaders(),
       body: JSON.stringify({
-        status: "em_atendimento",
-        atendenteId: usuario.id,
+        assumir: true,
       }),
     });
 
-    if (!resposta.ok) return;
-
     const conversaAtualizada = await resposta.json();
+
+    if (!resposta.ok) {
+      alert(conversaAtualizada.erro || "Erro ao assumir conversa.");
+      return;
+    }
 
     conversas = conversas.map((c) =>
       c.id === conversaAtualizada.id ? { ...c, ...conversaAtualizada } : c
@@ -481,12 +504,67 @@ async function assumirConversa() {
     conversaAtual = { ...conversaAtual, ...conversaAtualizada };
     chatStatus.value = conversaAtual.status;
 
+    atualizarInfoAtendente(conversaAtual);
+    atualizarBotoesConversa(conversaAtual);
     renderizarConversas();
     atualizarEstatisticas();
   } catch (erro) {
     console.error("Erro ao assumir conversa:", erro);
+    alert("Erro de conexão ao assumir conversa.");
   }
 }
+
+function atualizarInfoAtendente(conversa) {
+  if (!chatAtendenteInfo) return;
+
+  if (conversa?.atendenteNome) {
+    chatAtendenteInfo.textContent = `Atendente: ${conversa.atendenteNome}`;
+    chatAtendenteInfo.classList.add("com-atendente");
+  } else {
+    chatAtendenteInfo.textContent = "Sem atendente responsável";
+    chatAtendenteInfo.classList.remove("com-atendente");
+  }
+}
+
+function atualizarBotoesConversa(conversa) {
+  if (!chatInput || !btnEnviar) return;
+
+  const finalizada = conversa?.status === "finalizada";
+
+  if (btnFinalizarConversa) {
+    btnFinalizarConversa.style.display = finalizada ? "none" : "inline-flex";
+  }
+
+  if (btnReabrirConversa) {
+    btnReabrirConversa.style.display = finalizada ? "inline-flex" : "none";
+  }
+
+  if (btnAtribuir) {
+    btnAtribuir.style.display = finalizada ? "none" : "inline-flex";
+  }
+
+  chatInput.disabled = finalizada;
+  btnEnviar.disabled = finalizada;
+  chatInput.placeholder = finalizada
+    ? "Conversa finalizada. Reabra para responder."
+    : "Digite sua mensagem...";
+}
+
+async function finalizarConversa() {
+  if (!conversaAtual) return;
+
+  const confirmar = confirm("Deseja finalizar esta conversa?");
+  if (!confirmar) return;
+
+  await atualizarStatus("finalizada");
+}
+
+async function reabrirConversa() {
+  if (!conversaAtual) return;
+
+  await atualizarStatus("aguardando");
+}
+
 
 function ajustarAlturaTextarea() {
   chatInput.style.height = "auto";
@@ -720,9 +798,7 @@ async function excluirAtendente(id, nome) {
 }
 function configurarEventos() {
   btnSair.addEventListener("click", sair);
-
   btnEnviar.addEventListener("click", enviarMensagem);
-
   chatInput.addEventListener("input", ajustarAlturaTextarea);
 
   chatInput.addEventListener("keydown", (e) => {
@@ -737,6 +813,8 @@ function configurarEventos() {
   });
 
   btnAtribuir.addEventListener("click", assumirConversa);
+  btnFinalizarConversa?.addEventListener("click", finalizarConversa);
+  btnReabrirConversa?.addEventListener("click", reabrirConversa);
 
   searchConversas.addEventListener("input", (e) => {
     buscaAtual = e.target.value;
@@ -754,54 +832,58 @@ function configurarEventos() {
       renderizarConversas();
     });
   });
-  document.addEventListener("click", (e) => {
-  const imagemMensagem = e.target.closest(".mensagem-imagem");
 
-  if (imagemMensagem) {
-    abrirModalImagem(imagemMensagem.dataset.url);
-  }
+  const modalImagem = document.getElementById("modalImagem");
+  const btnFecharImagem = document.getElementById("btnFecharImagem");
+  const btnBaixarImagem = document.getElementById("btnBaixarImagem");
+
+  btnFecharImagem?.addEventListener("click", fecharModalImagem);
+  btnBaixarImagem?.addEventListener("click", baixarImagemAtual);
+
+  modalImagem?.addEventListener("click", (e) => {
+    if (e.target === modalImagem) {
+      fecharModalImagem();
+    }
+  });
+
   const btnAbrirAtendentes = document.getElementById("btnAbrirAtendentes");
-const btnFecharAtendentes = document.getElementById("btnFecharAtendentes");
-const modalAtendentes = document.getElementById("modalAtendentes");
-const formNovoAtendente = document.getElementById("formNovoAtendente");
+  const btnFecharAtendentes = document.getElementById("btnFecharAtendentes");
+  const modalAtendentes = document.getElementById("modalAtendentes");
+  const formNovoAtendente = document.getElementById("formNovoAtendente");
 
-btnAbrirAtendentes?.addEventListener("click", abrirModalAtendentes);
-btnFecharAtendentes?.addEventListener("click", fecharModalAtendentes);
-formNovoAtendente?.addEventListener("submit", criarAtendente);
+  btnAbrirAtendentes?.addEventListener("click", abrirModalAtendentes);
+  btnFecharAtendentes?.addEventListener("click", fecharModalAtendentes);
+  formNovoAtendente?.addEventListener("submit", criarAtendente);
 
-modalAtendentes?.addEventListener("click", (e) => {
-  if (e.target === modalAtendentes) {
-    fecharModalAtendentes();
-  }
-});
-});
+  modalAtendentes?.addEventListener("click", (e) => {
+    if (e.target === modalAtendentes) {
+      fecharModalAtendentes();
+    }
+  });
 
-const modalImagem = document.getElementById("modalImagem");
-const btnFecharImagem = document.getElementById("btnFecharImagem");
-const btnBaixarImagem = document.getElementById("btnBaixarImagem");
+  document.addEventListener("click", (e) => {
+    const imagemMensagem = e.target.closest(".mensagem-imagem");
 
-btnFecharImagem?.addEventListener("click", fecharModalImagem);
-btnBaixarImagem?.addEventListener("click", baixarImagemAtual);
+    if (imagemMensagem) {
+      abrirModalImagem(imagemMensagem.dataset.url);
+      return;
+    }
 
-modalImagem?.addEventListener("click", (e) => {
-  if (e.target === modalImagem) {
-    fecharModalImagem();
-  }
-});
+    const btnExcluir = e.target.closest(".btn-excluir-atendente");
 
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
-    fecharModalImagem();
-  }
-});
-document.addEventListener("click", (e) => {
-  const btnExcluir = e.target.closest(".btn-excluir-atendente");
+    if (btnExcluir) {
+      excluirAtendente(btnExcluir.dataset.id, btnExcluir.dataset.nome);
+    }
+  });
 
-  if (btnExcluir) {
-    excluirAtendente(btnExcluir.dataset.id, btnExcluir.dataset.nome);
-  }
-});
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      fecharModalImagem();
+      fecharModalAtendentes();
+    }
+  });
 }
+
 
 function configurarSocket() {
   socket.on("nova_conversa", async () => {
@@ -816,6 +898,8 @@ function configurarSocket() {
     if (conversaAtual?.id === conversaAtualizada.id) {
       conversaAtual = { ...conversaAtual, ...conversaAtualizada };
       chatStatus.value = conversaAtual.status;
+      atualizarInfoAtendente(conversaAtual);
+      atualizarBotoesConversa(conversaAtual);
     }
 
     renderizarConversas();

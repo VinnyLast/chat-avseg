@@ -33,6 +33,9 @@
                 <button class="filter-btn active" data-status="todas">
                     Todas
                 </button>
+                <button class="filter-btn" data-status="minhas">
+                    Minhas
+                </button>
                 <button class="filter-btn" data-status="aguardando">
                     Aguardando
                 </button>
@@ -89,6 +92,7 @@
                         <div class="chat-header-text">
                             <h3 id="chatClienteNome">Cliente</h3>
                             <span id="chatClienteTelefone" class="chat-telefone">-</span>
+                            <p id="chatAtendenteInfo" class="chat-atendente-info">Sem atendente responsável</p>
                         </div>
                     </div>
                     
@@ -101,6 +105,14 @@
                         
                         <button id="btnAtribuir" class="btn-secondary-small">
                             Assumir Conversa
+                        </button>
+
+                        <button id="btnFinalizarConversa" class="btn-chat-action btn-finalizar" type="button">
+                            Finalizar
+                        </button>
+
+                        <button id="btnReabrirConversa" class="btn-chat-action btn-reabrir" type="button" style="display: none;">
+                            Reabrir
                         </button>
                     </div>
                 </div>
