@@ -1772,3 +1772,28 @@ body.modal-aberto {
         flex-direction: row;
     }
 }
+/* Logo da marca */
+.brand-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--primary);
+}
+
+.brand-logo {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    display: block;
+    flex-shrink: 0;
+}
+
+.login-brand {
+    justify-content: center;
+    font-size: 32px;
+}
+
+.login-brand .brand-logo {
+    width: 42px;
+    height: 42px;
+}
