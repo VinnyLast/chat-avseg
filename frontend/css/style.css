@@ -1776,13 +1776,13 @@ body.modal-aberto {
 .brand-title {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     color: var(--primary);
 }
 
 .brand-logo {
-    width: 34px;
-    height: 34px;
+    width: 52px;
+    height: 52px;
     object-fit: contain;
     display: block;
     flex-shrink: 0;
@@ -1794,10 +1794,11 @@ body.modal-aberto {
 }
 
 .login-brand .brand-logo {
-    width: 42px;
-    height: 42px;
+    width: 70px;
+    height: 70px;
 }
+
 .sidebar-header .brand-logo {
-    width: 38px;
-    height: 38px;
+    width: 58px;
+    height: 58px;
 }
