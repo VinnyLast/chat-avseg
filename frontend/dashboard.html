@@ -42,6 +42,11 @@
                 <button class="filter-btn" data-status="finalizada">
                     Finalizadas
                 </button>
+                <div class="sidebar-admin">
+  <button id="btnAbrirAtendentes" class="btn-admin">
+    👥 Atendentes
+  </button>
+</div>
             </div>
         </aside>
         
@@ -163,6 +168,63 @@
       <button id="btnBaixarImagem" class="btn-download-imagem">
         Baixar imagem
       </button>
+    </div>
+  </div>
+</div>
+<div id="modalAtendentes" class="modal-overlay" style="display: none;">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <h3>Atendentes</h3>
+        <p>Gerencie os usuários que acessam o chat AVSEG</p>
+      </div>
+
+      <button id="btnFecharAtendentes" class="btn-icon" type="button">
+        ×
+      </button>
+    </div>
+
+    <form id="formNovoAtendente" class="form-atendente">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="novoNome">Nome</label>
+          <input type="text" id="novoNome" placeholder="Nome do atendente" required>
+        </div>
+
+        <div class="form-group">
+          <label for="novoEmail">Email</label>
+          <input type="email" id="novoEmail" placeholder="email@avseg.com" required>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="novaSenha">Senha inicial</label>
+          <input type="password" id="novaSenha" placeholder="Senha inicial" required>
+        </div>
+
+        <div class="form-group">
+          <label for="novoRole">Tipo</label>
+          <select id="novoRole">
+            <option value="atendente">Atendente</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="erroAtendente" class="erro-mensagem" style="display: none;"></div>
+
+      <button type="submit" class="btn-primary">
+        Criar usuário
+      </button>
+    </form>
+
+    <div class="lista-atendentes-header">
+      <h4>Usuários cadastrados</h4>
+    </div>
+
+    <div id="listaAtendentes" class="lista-atendentes">
+      <div class="loading">Carregando atendentes...</div>
     </div>
   </div>
 </div>

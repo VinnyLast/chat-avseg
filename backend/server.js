@@ -258,12 +258,14 @@ app.get("/api/conversas", autenticar, (req, res) => {
     ).length;
     
     return {
-      ...conv,
-      ultimaMensagem: ultimaMensagem?.texto || "",
-      ultimaMensagemData: ultimaMensagem?.criadoEm || conv.atualizadoEm,
-      mensagensNaoLidas: naoLidas,
-      totalMensagens: mensagensConv.length,
-    };
+  ...conv,
+  ultimaMensagem: ultimaMensagem?.texto || "",
+  ultimaMensagemTipo: ultimaMensagem?.tipo || "texto",
+  ultimaMensagemNomeArquivo: ultimaMensagem?.nomeArquivo || "",
+  ultimaMensagemData: ultimaMensagem?.criadoEm || conv.atualizadoEm,
+  mensagensNaoLidas: naoLidas,
+  totalMensagens: mensagensConv.length,
+};
   });
   
   // Ordenar por última atualização

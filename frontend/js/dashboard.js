@@ -166,14 +166,16 @@ function filtrarConversas() {
 }
 function formatarUltimaMensagem(conversa) {
   const texto = conversa.ultimaMensagem || "";
+  const tipo = conversa.ultimaMensagemTipo || "";
 
-  if (texto.toLowerCase().includes("áudio")) {
-    return "🎧 Áudio enviado";
-  }
+  if (tipo === "imagem") return "🖼️ Imagem enviada";
+  if (tipo === "audio") return "🎧 Áudio enviado";
+  if (tipo === "video") return "🎬 Vídeo enviado";
+  if (tipo === "arquivo") return "📎 Arquivo enviado";
 
-  if (texto.toLowerCase().includes("foto") || texto.toLowerCase().includes("imagem")) {
-    return "🖼️ Imagem enviada";
-  }
+  if (texto.toLowerCase().includes("áudio")) return "🎧 Áudio enviado";
+  if (texto.toLowerCase().includes("foto") || texto.toLowerCase().includes("imagem")) return "🖼️ Imagem enviada";
+  if (texto.toLowerCase().includes("arquivo") || texto.toLowerCase().includes("documento")) return "📎 Arquivo enviado";
 
   return texto || "Sem mensagens";
 }
@@ -279,41 +281,82 @@ async function carregarMensagens(conversaId) {
     chatMensagens.innerHTML = `<div class="loading">Erro ao carregar mensagens.</div>`;
   }
 }
+function iconeArquivo(mimeType = "", nomeArquivo = "") {
+  const nome = nomeArquivo.toLowerCase();
 
+  if (mimeType.includes("pdf") || nome.endsWith(".pdf")) return "📄";
+  if (mimeType.includes("word") || nome.endsWith(".doc") || nome.endsWith(".docx")) return "📝";
+  if (mimeType.includes("excel") || nome.endsWith(".xls") || nome.endsWith(".xlsx")) return "📊";
+  if (mimeType.includes("zip") || nome.endsWith(".zip") || nome.endsWith(".rar")) return "🗜️";
+  if (mimeType.includes("video")) return "🎬";
+  if (mimeType.includes("audio")) return "🎧";
+  if (mimeType.includes("image")) return "🖼️";
+
+  return "📎";
+}
 function adicionarMensagemNaTela(mensagem) {
   const div = document.createElement("div");
   div.className = `mensagem ${mensagem.origem === "atendente" ? "atendente" : "cliente"}`;
 
   const tipo = mensagem.tipo || "texto";
+  const arquivoUrl = mensagem.arquivoUrl || "";
+  const nomeArquivo = mensagem.nomeArquivo || "Arquivo enviado";
+  const mimeType = mensagem.mimeType || "";
+
   let conteudo = "";
 
-  if (tipo === "imagem" && mensagem.arquivoUrl) {
+  if (tipo === "imagem" && arquivoUrl) {
     conteudo = `
       <div class="mensagem-midia">
         <img 
-  src="${mensagem.arquivoUrl}" 
-  alt="Imagem enviada" 
-  class="mensagem-imagem"
-  data-url="${mensagem.arquivoUrl}"
->
+          src="${arquivoUrl}" 
+          alt="Imagem enviada" 
+          class="mensagem-imagem"
+          data-url="${arquivoUrl}"
+        >
       </div>
       ${mensagem.texto ? `<p class="mensagem-texto legenda-midia">${escaparHTML(mensagem.texto)}</p>` : ""}
     `;
-  } else if (tipo === "audio" && mensagem.arquivoUrl) {
+  } else if (tipo === "audio" && arquivoUrl) {
     conteudo = `
       <div class="mensagem-midia">
         <audio controls class="mensagem-audio">
-          <source src="${mensagem.arquivoUrl}" type="${mensagem.mimeType || "audio/mpeg"}">
+          <source src="${arquivoUrl}" type="${mimeType || "audio/mpeg"}">
           Seu navegador não suporta áudio.
         </audio>
       </div>
       ${mensagem.texto ? `<p class="mensagem-texto legenda-midia">${escaparHTML(mensagem.texto)}</p>` : ""}
     `;
-  } else if (tipo === "arquivo" && mensagem.arquivoUrl) {
+  } else if (tipo === "video" && arquivoUrl) {
     conteudo = `
-      <a href="${mensagem.arquivoUrl}" target="_blank" class="mensagem-arquivo">
-        📎 ${escaparHTML(mensagem.nomeArquivo || "Abrir arquivo")}
-      </a>
+      <div class="mensagem-midia">
+        <video controls class="mensagem-video">
+          <source src="${arquivoUrl}" type="${mimeType || "video/mp4"}">
+          Seu navegador não suporta vídeo.
+        </video>
+      </div>
+      ${mensagem.texto ? `<p class="mensagem-texto legenda-midia">${escaparHTML(mensagem.texto)}</p>` : ""}
+    `;
+  } else if (arquivoUrl) {
+    conteudo = `
+      <div class="mensagem-arquivo-card">
+        <div class="arquivo-icone">${iconeArquivo(mimeType, nomeArquivo)}</div>
+
+        <div class="arquivo-info">
+          <strong>${escaparHTML(nomeArquivo)}</strong>
+          <span>${escaparHTML(mimeType || "Arquivo")}</span>
+        </div>
+
+        <div class="arquivo-acoes">
+          <a href="${arquivoUrl}" target="_blank" class="arquivo-btn">
+            Abrir
+          </a>
+          <a href="${arquivoUrl}" download="${escaparHTML(nomeArquivo)}" class="arquivo-btn">
+            Baixar
+          </a>
+        </div>
+      </div>
+
       ${mensagem.texto ? `<p class="mensagem-texto legenda-midia">${escaparHTML(mensagem.texto)}</p>` : ""}
     `;
   } else {
@@ -501,6 +544,140 @@ async function baixarImagemAtual() {
     link.click();
   }
 }
+function abrirModalAtendentes() {
+  const modal = document.getElementById("modalAtendentes");
+  if (!modal) return;
+
+  modal.style.display = "flex";
+  carregarAtendentes();
+}
+
+function fecharModalAtendentes() {
+  const modal = document.getElementById("modalAtendentes");
+  if (!modal) return;
+
+  modal.style.display = "none";
+}
+
+function primeiraLetraUsuario(nome, email) {
+  const base = nome || email || "U";
+  return base.trim().charAt(0).toUpperCase();
+}
+
+function mostrarErroAtendente(mensagem) {
+  const erro = document.getElementById("erroAtendente");
+  if (!erro) return;
+
+  erro.textContent = mensagem;
+  erro.style.display = "block";
+}
+
+function esconderErroAtendente() {
+  const erro = document.getElementById("erroAtendente");
+  if (!erro) return;
+
+  erro.textContent = "";
+  erro.style.display = "none";
+}
+
+async function carregarAtendentes() {
+  const lista = document.getElementById("listaAtendentes");
+
+  if (!lista) return;
+
+  lista.innerHTML = `<div class="loading">Carregando atendentes...</div>`;
+
+  try {
+    const resposta = await fetch(`${API_URL}/api/usuarios`, {
+      headers: authHeaders(),
+    });
+
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+      lista.innerHTML = `<div class="loading">${dados.erro || "Erro ao carregar atendentes."}</div>`;
+      return;
+    }
+
+    if (!dados.length) {
+      lista.innerHTML = `<div class="loading">Nenhum usuário cadastrado.</div>`;
+      return;
+    }
+
+    lista.innerHTML = "";
+
+    dados.forEach((atendente) => {
+      const item = document.createElement("div");
+      item.className = "atendente-item";
+
+      item.innerHTML = `
+        <div class="atendente-avatar">
+          ${primeiraLetraUsuario(atendente.nome, atendente.email)}
+        </div>
+
+        <div class="atendente-info">
+          <h5>${escaparHTML(atendente.nome || "Sem nome")}</h5>
+          <p>${escaparHTML(atendente.email || "")}</p>
+        </div>
+
+        <span class="atendente-role ${atendente.role}">
+          ${atendente.role === "admin" ? "Admin" : "Atendente"}
+        </span>
+      `;
+
+      lista.appendChild(item);
+    });
+  } catch (erro) {
+    console.error("Erro ao carregar atendentes:", erro);
+    lista.innerHTML = `<div class="loading">Erro de conexão ao carregar atendentes.</div>`;
+  }
+}
+
+async function criarAtendente(e) {
+  e.preventDefault();
+  esconderErroAtendente();
+
+  const nome = document.getElementById("novoNome")?.value.trim();
+  const email = document.getElementById("novoEmail")?.value.trim();
+  const senha = document.getElementById("novaSenha")?.value;
+  const role = document.getElementById("novoRole")?.value || "atendente";
+
+  if (!nome || !email || !senha) {
+    mostrarErroAtendente("Preencha nome, email e senha.");
+    return;
+  }
+
+  if (senha.length < 6) {
+    mostrarErroAtendente("Use uma senha com pelo menos 6 caracteres.");
+    return;
+  }
+
+  try {
+    const resposta = await fetch(`${API_URL}/api/auth/registrar`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({
+        nome,
+        email,
+        senha,
+        role,
+      }),
+    });
+
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+      mostrarErroAtendente(dados.erro || "Erro ao criar atendente.");
+      return;
+    }
+
+    document.getElementById("formNovoAtendente").reset();
+    await carregarAtendentes();
+  } catch (erro) {
+    console.error("Erro ao criar atendente:", erro);
+    mostrarErroAtendente("Erro de conexão ao criar atendente.");
+  }
+}
 function configurarEventos() {
   btnSair.addEventListener("click", sair);
 
@@ -543,6 +720,20 @@ function configurarEventos() {
   if (imagemMensagem) {
     abrirModalImagem(imagemMensagem.dataset.url);
   }
+  const btnAbrirAtendentes = document.getElementById("btnAbrirAtendentes");
+const btnFecharAtendentes = document.getElementById("btnFecharAtendentes");
+const modalAtendentes = document.getElementById("modalAtendentes");
+const formNovoAtendente = document.getElementById("formNovoAtendente");
+
+btnAbrirAtendentes?.addEventListener("click", abrirModalAtendentes);
+btnFecharAtendentes?.addEventListener("click", fecharModalAtendentes);
+formNovoAtendente?.addEventListener("submit", criarAtendente);
+
+modalAtendentes?.addEventListener("click", (e) => {
+  if (e.target === modalAtendentes) {
+    fecharModalAtendentes();
+  }
+});
 });
 
 const modalImagem = document.getElementById("modalImagem");
