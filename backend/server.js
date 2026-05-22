@@ -340,14 +340,17 @@ app.post("/api/conversas/:id/mensagens", autenticar, async (req, res) => {
   const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
   
   const novaMensagem = {
-    id: gerarId(),
-    conversaId: conversa.id,
-    texto,
-    origem: "atendente",
-    usuarioId: req.usuario.id,
-    lida: true,
-    criadoEm: new Date().toISOString(),
-  };
+  id: gerarId(),
+  conversaId: conversa.id,
+  tipo: tipo || "texto",
+  texto: mensagem || "",
+  arquivoUrl: arquivoUrl || null,
+  mimeType: mimeType || null,
+  nomeArquivo: nomeArquivo || null,
+  origem: "cliente",
+  lida: false,
+  criadoEm: new Date().toISOString(),
+};
   
   mensagens.push(novaMensagem);
   salvarDB(ARQUIVOS_DB.mensagens, mensagens);
