@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AVSEG Chat - Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>🦁 AVSEG Chat</h2>
+                <div class="user-info">
+                    <span id="userName">Carregando...</span>
+                    <button id="btnSair" class="btn-secondary-small">Sair</button>
+                </div>
+            </div>
+            
+            <div class="sidebar-stats">
+                <div class="stat-card">
+                    <span class="stat-number" id="totalConversas">0</span>
+                    <span class="stat-label">Conversas Ativas</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number" id="aguardando">0</span>
+                    <span class="stat-label">Aguardando</span>
+                </div>
+            </div>
+            
+            <div class="sidebar-filters">
+                <button class="filter-btn active" data-status="todas">
+                    Todas
+                </button>
+                <button class="filter-btn" data-status="aguardando">
+                    Aguardando
+                </button>
+                <button class="filter-btn" data-status="em_atendimento">
+                    Em Atendimento
+                </button>
+                <button class="filter-btn" data-status="finalizada">
+                    Finalizadas
+                </button>
+            </div>
+        </aside>
+        
+        <!-- Lista de conversas -->
+        <div class="conversas-list">
+            <div class="conversas-header">
+                <h3>Conversas</h3>
+                <input 
+                    type="text" 
+                    id="searchConversas" 
+                    placeholder="🔍 Buscar por nome ou telefone..."
+                    class="search-input"
+                >
+            </div>
+            
+            <div id="listaConversas" class="conversas-items">
+                <div class="loading">Carregando conversas...</div>
+            </div>
+        </div>
+        
+        <!-- Área de chat -->
+        <div class="chat-container">
+            <div id="chatVazio" class="chat-vazio">
+                <div class="chat-vazio-content">
+                    <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <h3>Selecione uma conversa</h3>
+                    <p>Escolha uma conversa da lista ao lado para começar</p>
+                </div>
+            </div>
+            
+            <div id="chatAtivo" class="chat-ativo" style="display: none;">
+                <!-- Header do chat -->
+                <div class="chat-header">
+                    <div class="chat-header-info">
+                        <div class="avatar">
+                            <span id="chatClienteInicial">C</span>
+                        </div>
+                        <div class="chat-header-text">
+                            <h3 id="chatClienteNome">Cliente</h3>
+                            <span id="chatClienteTelefone" class="chat-telefone">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-header-actions">
+                        <select id="chatStatus" class="status-select">
+                            <option value="aguardando">Aguardando</option>
+                            <option value="em_atendimento">Em Atendimento</option>
+                            <option value="finalizada">Finalizada</option>
+                        </select>
+                        
+                        <button id="btnAtribuir" class="btn-secondary-small">
+                            Assumir Conversa
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Mensagens -->
+                <div id="chatMensagens" class="chat-mensagens">
+                    <!-- Mensagens serão carregadas aqui -->
+                </div>
+                
+                <!-- Input de mensagem -->
+                <div class="chat-input-container">
+                    <textarea 
+                        id="chatInput" 
+                        placeholder="Digite sua mensagem..."
+                        rows="1"
+                    ></textarea>
+                    <button id="btnEnviar" class="btn-enviar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Template de mensagem -->
+    <template id="mensagemTemplate">
+        <div class="mensagem">
+            <div class="mensagem-conteudo">
+                <p class="mensagem-texto"></p>
+                <span class="mensagem-hora"></span>
+            </div>
+        </div>
+    </template>
+    
+    <!-- Template de conversa -->
+    <template id="conversaTemplate">
+        <div class="conversa-item" data-conversa-id="">
+            <div class="conversa-avatar">
+                <span class="conversa-inicial"></span>
+            </div>
+            <div class="conversa-info">
+                <div class="conversa-header">
+                    <h4 class="conversa-nome"></h4>
+                    <span class="conversa-hora"></span>
+                </div>
+                <div class="conversa-footer">
+                    <p class="conversa-ultima-msg"></p>
+                    <span class="conversa-badge" style="display: none;">0</span>
+                </div>
+            </div>
+            <div class="conversa-status"></div>
+        </div>
+    </template>
+    
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
