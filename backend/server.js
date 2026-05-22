@@ -432,9 +432,56 @@ app.get("/api/usuarios", autenticar, (req, res) => {
   
   const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
   
-  const usuariosSemSenha = usuarios.map(({ senha, ...usuario }) => usuario);
+  const usuariosSemSenha = usuarios
+  .filter((u) => u.ativo !== false)
+  .map(({ senha, ...usuario }) => usuario);
   
   res.json(usuariosSemSenha);
+});
+// Excluir/desativar usuário (apenas admin)
+app.delete("/api/usuarios/:id", autenticar, (req, res) => {
+  if (req.usuario.role !== "admin") {
+    return res.status(403).json({ erro: "Sem permissão" });
+  }
+
+  const usuarioId = req.params.id;
+
+  if (usuarioId === req.usuario.id) {
+    return res.status(400).json({
+      erro: "Você não pode excluir seu próprio usuário logado.",
+    });
+  }
+
+  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
+  const indice = usuarios.findIndex((u) => u.id === usuarioId && u.ativo !== false);
+
+  if (indice === -1) {
+    return res.status(404).json({ erro: "Usuário não encontrado" });
+  }
+
+  const usuario = usuarios[indice];
+
+  if (usuario.role === "admin") {
+    const adminsAtivos = usuarios.filter(
+      (u) => u.role === "admin" && u.ativo !== false
+    );
+
+    if (adminsAtivos.length <= 1) {
+      return res.status(400).json({
+        erro: "Não é possível excluir o último administrador.",
+      });
+    }
+  }
+
+  usuarios[indice].ativo = false;
+  usuarios[indice].excluidoEm = new Date().toISOString();
+
+  salvarDB(ARQUIVOS_DB.usuarios, usuarios);
+
+  res.json({
+    ok: true,
+    mensagem: "Usuário excluído com sucesso.",
+  });
 });
 
 // =============================================================================

@@ -610,20 +610,32 @@ async function carregarAtendentes() {
       const item = document.createElement("div");
       item.className = "atendente-item";
 
-      item.innerHTML = `
-        <div class="atendente-avatar">
-          ${primeiraLetraUsuario(atendente.nome, atendente.email)}
-        </div>
+      const podeExcluir = usuario?.role === "admin" && atendente.id !== usuario.id;
 
-        <div class="atendente-info">
-          <h5>${escaparHTML(atendente.nome || "Sem nome")}</h5>
-          <p>${escaparHTML(atendente.email || "")}</p>
-        </div>
+item.innerHTML = `
+  <div class="atendente-avatar">
+    ${primeiraLetraUsuario(atendente.nome, atendente.email)}
+  </div>
 
-        <span class="atendente-role ${atendente.role}">
-          ${atendente.role === "admin" ? "Admin" : "Atendente"}
-        </span>
-      `;
+  <div class="atendente-info">
+    <h5>${escaparHTML(atendente.nome || "Sem nome")}</h5>
+    <p>${escaparHTML(atendente.email || "")}</p>
+  </div>
+
+  <div class="atendente-acoes">
+    <span class="atendente-role ${atendente.role}">
+      ${atendente.role === "admin" ? "Admin" : "Atendente"}
+    </span>
+
+    ${
+      podeExcluir
+        ? `<button class="btn-excluir-atendente" data-id="${atendente.id}" data-nome="${escaparHTML(atendente.nome || atendente.email)}">
+            Excluir
+          </button>`
+        : ""
+    }
+  </div>
+`;
 
       lista.appendChild(item);
     });
@@ -676,6 +688,34 @@ async function criarAtendente(e) {
   } catch (erro) {
     console.error("Erro ao criar atendente:", erro);
     mostrarErroAtendente("Erro de conexão ao criar atendente.");
+  }
+}
+async function excluirAtendente(id, nome) {
+  if (!id) return;
+
+  const confirmar = confirm(
+    `Tem certeza que deseja excluir o usuário "${nome}"?\n\nEle não poderá mais acessar o chat.`
+  );
+
+  if (!confirmar) return;
+
+  try {
+    const resposta = await fetch(`${API_URL}/api/usuarios/${id}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+      alert(dados.erro || "Erro ao excluir usuário.");
+      return;
+    }
+
+    await carregarAtendentes();
+  } catch (erro) {
+    console.error("Erro ao excluir atendente:", erro);
+    alert("Erro de conexão ao excluir usuário.");
   }
 }
 function configurarEventos() {
@@ -752,6 +792,13 @@ modalImagem?.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     fecharModalImagem();
+  }
+});
+document.addEventListener("click", (e) => {
+  const btnExcluir = e.target.closest(".btn-excluir-atendente");
+
+  if (btnExcluir) {
+    excluirAtendente(btnExcluir.dataset.id, btnExcluir.dataset.nome);
   }
 });
 }

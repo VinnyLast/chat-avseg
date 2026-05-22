@@ -1333,3 +1333,40 @@ body.modal-aberto {
         padding: 18px;
     }
 }
+/* =============================================================================
+   EXCLUSÃO DE ATENDENTES
+   ============================================================================= */
+
+.atendente-acoes {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-excluir-atendente {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ff8a8a;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    padding: 6px 9px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-excluir-atendente:hover {
+    background: #ef4444;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .atendente-item {
+        grid-template-columns: 42px 1fr;
+    }
+
+    .atendente-acoes {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+    }
+}
