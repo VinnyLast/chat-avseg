@@ -289,6 +289,7 @@ async function abrirConversa(conversaId) {
 
   await carregarMensagens(conversa.id);
   await marcarComoLidas(conversa.id);
+  document.body.classList.add("chat-mobile-aberto");
 }
 
 async function carregarMensagens(conversaId) {
@@ -1179,21 +1180,26 @@ function configurarEventos() {
     renderizarConversas();
   });
 
-  document.querySelectorAll(".filter-btn").forEach((botao) => {
-    botao.addEventListener("click", () => {
-      document.querySelectorAll(".filter-btn").forEach((b) => {
-        b.classList.remove("active");
-      });
+  document.querySelectorAll(".filter-btn, .filter-btn-mobile").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    filtroAtual = btn.dataset.status;
 
-      botao.classList.add("active");
-      filtroAtual = botao.dataset.status;
-      renderizarConversas();
+    document.querySelectorAll(".filter-btn, .filter-btn-mobile").forEach((b) => {
+      b.classList.toggle("active", b.dataset.status === filtroAtual);
     });
+
+    renderizarConversas();
   });
+});
 
   const modalImagem = document.getElementById("modalImagem");
   const btnFecharImagem = document.getElementById("btnFecharImagem");
   const btnBaixarImagem = document.getElementById("btnBaixarImagem");
+  const btnVoltarConversas = document.getElementById("btnVoltarConversas");
+
+btnVoltarConversas?.addEventListener("click", () => {
+  document.body.classList.remove("chat-mobile-aberto");
+});
 
   btnFecharImagem?.addEventListener("click", fecharModalImagem);
   btnBaixarImagem?.addEventListener("click", baixarImagemAtual);

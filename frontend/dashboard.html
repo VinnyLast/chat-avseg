@@ -67,6 +67,13 @@
                     class="search-input"
                 >
             </div>
+            <div class="mobile-filters">
+  <button class="filter-btn-mobile active" data-status="todas">Todas</button>
+  <button class="filter-btn-mobile" data-status="minhas">Minhas</button>
+  <button class="filter-btn-mobile" data-status="aguardando">Aguardando</button>
+  <button class="filter-btn-mobile" data-status="em_atendimento">Em atendimento</button>
+  <button class="filter-btn-mobile" data-status="finalizada">Finalizadas</button>
+</div>
             
             <div id="listaConversas" class="conversas-items">
                 <div class="loading">Carregando conversas...</div>
@@ -88,6 +95,9 @@
             <div id="chatAtivo" class="chat-ativo" style="display: none;">
                 <!-- Header do chat -->
                 <div class="chat-header">
+                    <button id="btnVoltarConversas" class="btn-voltar-mobile" type="button">
+  ←
+</button>
                     <div class="chat-header-info">
                         <div class="avatar">
                             <span id="chatClienteInicial">C</span>
