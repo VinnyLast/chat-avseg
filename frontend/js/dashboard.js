@@ -291,11 +291,11 @@ function adicionarMensagemNaTela(mensagem) {
     conteudo = `
       <div class="mensagem-midia">
         <img 
-          src="${mensagem.arquivoUrl}" 
-          alt="Imagem enviada" 
-          class="mensagem-imagem"
-          onclick="window.open('${mensagem.arquivoUrl}', '_blank')"
-        >
+  src="${mensagem.arquivoUrl}" 
+  alt="Imagem enviada" 
+  class="mensagem-imagem"
+  data-url="${mensagem.arquivoUrl}"
+>
       </div>
       ${mensagem.texto ? `<p class="mensagem-texto legenda-midia">${escaparHTML(mensagem.texto)}</p>` : ""}
     `;
@@ -449,7 +449,58 @@ function ajustarAlturaTextarea() {
   chatInput.style.height = "auto";
   chatInput.style.height = `${Math.min(chatInput.scrollHeight, 120)}px`;
 }
+function abrirModalImagem(url) {
+  const modal = document.getElementById("modalImagem");
+  const imagem = document.getElementById("imagemAmpliada");
 
+  if (!modal || !imagem || !url) return;
+
+  imagem.src = url;
+  modal.style.display = "flex";
+  document.body.classList.add("modal-aberto");
+}
+
+function fecharModalImagem() {
+  const modal = document.getElementById("modalImagem");
+  const imagem = document.getElementById("imagemAmpliada");
+
+  if (!modal || !imagem) return;
+
+  modal.style.display = "none";
+  imagem.src = "";
+  document.body.classList.remove("modal-aberto");
+}
+
+async function baixarImagemAtual() {
+  const imagem = document.getElementById("imagemAmpliada");
+  const url = imagem?.src;
+
+  if (!url) return;
+
+  try {
+    const resposta = await fetch(url);
+    const blob = await resposta.blob();
+
+    const urlTemporaria = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = urlTemporaria;
+    link.download = `imagem-avseg-${Date.now()}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    URL.revokeObjectURL(urlTemporaria);
+  } catch (erro) {
+    console.error("Erro ao baixar imagem:", erro);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.download = `imagem-avseg-${Date.now()}.jpg`;
+    link.click();
+  }
+}
 function configurarEventos() {
   btnSair.addEventListener("click", sair);
 
@@ -486,6 +537,32 @@ function configurarEventos() {
       renderizarConversas();
     });
   });
+  document.addEventListener("click", (e) => {
+  const imagemMensagem = e.target.closest(".mensagem-imagem");
+
+  if (imagemMensagem) {
+    abrirModalImagem(imagemMensagem.dataset.url);
+  }
+});
+
+const modalImagem = document.getElementById("modalImagem");
+const btnFecharImagem = document.getElementById("btnFecharImagem");
+const btnBaixarImagem = document.getElementById("btnBaixarImagem");
+
+btnFecharImagem?.addEventListener("click", fecharModalImagem);
+btnBaixarImagem?.addEventListener("click", baixarImagemAtual);
+
+modalImagem?.addEventListener("click", (e) => {
+  if (e.target === modalImagem) {
+    fecharModalImagem();
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    fecharModalImagem();
+  }
+});
 }
 
 function configurarSocket() {

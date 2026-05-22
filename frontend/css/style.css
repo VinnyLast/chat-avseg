@@ -954,3 +954,89 @@ body {
 .chat-input-container {
     flex-shrink: 0;
 }
+/* =============================================================================
+   MODAL DE IMAGEM AMPLIADA
+   ============================================================================= */
+
+.modal-imagem-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.modal-imagem-card {
+    position: relative;
+    width: min(980px, 96vw);
+    max-height: 92vh;
+    background: #0f0f0f;
+    border: 1px solid var(--yellow-border);
+    border-radius: 18px;
+    box-shadow: 0 24px 90px rgba(0, 0, 0, 0.8);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+#imagemAmpliada {
+    max-width: 100%;
+    max-height: 76vh;
+    object-fit: contain;
+    border-radius: 14px;
+    background: #050505;
+}
+
+.modal-imagem-fechar {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--yellow-border);
+    background: var(--primary);
+    color: #050505;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    font-weight: 700;
+    box-shadow: var(--shadow);
+}
+
+.modal-imagem-fechar:hover {
+    background: var(--primary-hover);
+    transform: scale(1.04);
+}
+
+.modal-imagem-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-download-imagem {
+    background: var(--primary);
+    color: #050505;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 16px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-download-imagem:hover {
+    background: var(--primary-hover);
+}
+
+body.modal-aberto {
+    overflow: hidden;
+}
+
+.mensagem-imagem {
+    cursor: zoom-in;
+}

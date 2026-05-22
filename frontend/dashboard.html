@@ -152,7 +152,20 @@
             <div class="conversa-status"></div>
         </div>
     </template>
-    
+    <!-- Modal de visualização de imagem -->
+<div id="modalImagem" class="modal-imagem-overlay" style="display: none;">
+  <div class="modal-imagem-card">
+    <button id="btnFecharImagem" class="modal-imagem-fechar">×</button>
+
+    <img id="imagemAmpliada" src="" alt="Imagem ampliada">
+
+    <div class="modal-imagem-actions">
+      <button id="btnBaixarImagem" class="btn-download-imagem">
+        Baixar imagem
+      </button>
+    </div>
+  </div>
+</div>
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     <script src="js/dashboard.js"></script>
 </body>
