@@ -1797,3 +1797,7 @@ body.modal-aberto {
     width: 42px;
     height: 42px;
 }
+.sidebar-header .brand-logo {
+    width: 38px;
+    height: 38px;
+}
