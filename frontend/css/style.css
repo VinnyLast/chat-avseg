@@ -1776,13 +1776,14 @@ body.modal-aberto {
 .brand-title {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
+    gap: 14px;
     color: var(--primary);
 }
 
 .brand-logo {
-    width: 52px;
-    height: 52px;
+    width: 56px;
+    height: 56px;
     object-fit: contain;
     display: block;
     flex-shrink: 0;
@@ -1790,15 +1791,39 @@ body.modal-aberto {
 
 .login-brand {
     justify-content: center;
-    font-size: 32px;
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 20px;
 }
 
 .login-brand .brand-logo {
-    width: 70px;
-    height: 70px;
+    width: 72px;
+    height: 72px;
 }
 
 .sidebar-header .brand-logo {
-    width: 58px;
-    height: 58px;
+    width: 56px;
+    height: 56px;
+}
+.login-header h1 {
+    font-size: 34px;
+    letter-spacing: -0.5px;
+}
+.login-brand-vertical {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: var(--primary);
+    font-size: 36px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 20px;
+}
+
+.login-logo-grande {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
 }
