@@ -2199,3 +2199,203 @@ body.modal-aberto {
         font-weight: 800;
     }
 }
+/* =============================================================================
+   CORREÇÕES FINAIS MOBILE - AVSEG CHAT
+   Colocado no final para sobrescrever regras antigas conflitantes.
+   ============================================================================= */
+
+@media (max-width: 900px) {
+    body {
+        overflow: hidden;
+    }
+
+    .dashboard-container {
+        display: flex !important;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .sidebar {
+        display: none !important;
+    }
+
+    .conversas-list {
+        display: flex !important;
+        flex-direction: column;
+        width: 100vw;
+        min-width: 100vw;
+        height: 100vh;
+        border-right: none;
+    }
+
+    .chat-container {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 50;
+        background: var(--bg-light);
+        transform: translateX(100%);
+        transition: transform 0.25s ease;
+    }
+
+    body.chat-mobile-aberto .chat-container {
+        transform: translateX(0);
+    }
+
+    .chat-header {
+        min-height: 72px;
+        padding: 12px 14px;
+        gap: 10px;
+    }
+
+    .chat-header-info {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .chat-header-text h3 {
+        font-size: 17px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .chat-telefone,
+    .chat-atendente-info {
+        font-size: 12px;
+    }
+
+    .chat-header-actions {
+        gap: 6px;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .chat-header-actions select,
+    .chat-header-actions button {
+        font-size: 12px;
+        padding: 8px 9px;
+        height: 38px;
+    }
+
+    .chat-mensagens {
+        padding: 14px;
+        padding-bottom: 20px;
+    }
+
+    .mensagem-conteudo {
+        max-width: 86vw;
+    }
+
+    .mensagem-imagem {
+        max-width: 78vw;
+        max-height: 260px;
+    }
+
+    .mensagem-audio {
+        width: 78vw;
+    }
+
+    .mensagem-video,
+    .mensagem-arquivo-card {
+        width: 78vw;
+        max-width: 78vw;
+    }
+
+    .chat-input-container {
+        padding: 10px;
+        gap: 8px;
+        border-top: 1px solid var(--border);
+    }
+
+    .chat-input-wrapper {
+        min-height: 48px;
+        border-radius: 14px;
+    }
+
+    #chatInput {
+        font-size: 16px;
+        min-height: 44px;
+    }
+
+    .btn-enviar,
+    .btn-input-action {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        border-radius: 50%;
+    }
+
+    .templates-rapidos {
+        left: 10px;
+        right: 10px;
+        bottom: 72px;
+        width: auto;
+        max-height: 280px;
+    }
+
+    .modal-card {
+        width: 94vw;
+        max-height: 88vh;
+        padding: 18px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .mobile-filters {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 12px 14px 0;
+        scrollbar-width: none;
+    }
+
+    .mobile-filters::-webkit-scrollbar {
+        display: none;
+    }
+
+    .filter-btn-mobile {
+        white-space: nowrap;
+        border: 1px solid var(--border);
+        background: #0f0f0f;
+        color: var(--text-secondary);
+        padding: 9px 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .filter-btn-mobile.active {
+        background: var(--primary);
+        color: #050505;
+        border-color: var(--primary);
+        font-weight: 800;
+    }
+
+    .btn-voltar-mobile {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 1px solid var(--border);
+        background: #0f0f0f;
+        color: var(--primary);
+        font-size: 22px;
+        font-weight: 800;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+}
+
+@media (min-width: 901px) {
+    .btn-voltar-mobile,
+    .mobile-filters {
+        display: none !important;
+    }
+}
