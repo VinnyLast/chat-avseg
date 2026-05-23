@@ -12,6 +12,7 @@ const socket = io(API_URL);
 
 const userName = document.getElementById("userName");
 const btnSair = document.getElementById("btnSair");
+const btnLogoutMobile = document.getElementById("btnLogoutMobile");
 const listaConversas = document.getElementById("listaConversas");
 const searchConversas = document.getElementById("searchConversas");
 
@@ -123,6 +124,26 @@ function escaparHTML(texto) {
   return div.innerHTML;
 }
 
+function svgIcon(nome, tamanho = 18) {
+  const attrs = `width="${tamanho}" height="${tamanho}" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"`;
+
+  const icons = {
+    busca: `<svg viewBox="0 0 24 24" ${attrs}><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.35-4.35"></path></svg>`,
+    usuario: `<svg viewBox="0 0 24 24" ${attrs}><path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle></svg>`,
+    imagem: `<svg viewBox="0 0 24 24" ${attrs}><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>`,
+    audio: `<svg viewBox="0 0 24 24" ${attrs}><path d="M12 3v10"></path><path d="M8 7v6a4 4 0 0 0 8 0V7"></path><path d="M19 11a7 7 0 0 1-14 0"></path><path d="M12 18v3"></path></svg>`,
+    video: `<svg viewBox="0 0 24 24" ${attrs}><rect x="3" y="5" width="14" height="14" rx="2"></rect><path d="M17 10l4-2v8l-4-2z"></path></svg>`,
+    arquivo: `<svg viewBox="0 0 24 24" ${attrs}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>`,
+    clip: `<svg viewBox="0 0 24 24" ${attrs}><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>`,
+    pdf: `<svg viewBox="0 0 24 24" ${attrs}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 15h1.5a1.5 1.5 0 0 0 0-3H8v6"></path><path d="M13 12v6h1a3 3 0 0 0 0-6h-1"></path></svg>`,
+    texto: `<svg viewBox="0 0 24 24" ${attrs}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8"></path><path d="M8 17h6"></path></svg>`,
+    planilha: `<svg viewBox="0 0 24 24" ${attrs}><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M9 4v16"></path><path d="M15 4v16"></path></svg>`,
+    zip: `<svg viewBox="0 0 24 24" ${attrs}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M10 4h2"></path><path d="M12 6h-2"></path><path d="M10 8h2"></path><path d="M12 10h-2"></path></svg>`
+  };
+
+  return icons[nome] || icons.arquivo;
+}
+
 async function verificarAutenticacao() {
   if (!token) {
     window.location.href = "index.html";
@@ -201,17 +222,30 @@ function formatarUltimaMensagem(conversa) {
   const texto = conversa.ultimaMensagem || "";
   const tipo = conversa.ultimaMensagemTipo || "";
 
-  if (tipo === "imagem") return "🖼️ Imagem enviada";
-  if (tipo === "audio") return "🎧 Áudio enviado";
-  if (tipo === "video") return "🎬 Vídeo enviado";
-  if (tipo === "arquivo") return "📎 Arquivo enviado";
+  if (tipo === "imagem") return "Imagem enviada";
+  if (tipo === "audio") return "Áudio enviado";
+  if (tipo === "video") return "Vídeo enviado";
+  if (tipo === "arquivo") return "Arquivo enviado";
 
-  if (texto.toLowerCase().includes("áudio")) return "🎧 Áudio enviado";
-  if (texto.toLowerCase().includes("foto") || texto.toLowerCase().includes("imagem")) return "🖼️ Imagem enviada";
-  if (texto.toLowerCase().includes("arquivo") || texto.toLowerCase().includes("documento")) return "📎 Arquivo enviado";
+  if (texto.toLowerCase().includes("áudio")) return "Áudio enviado";
+  if (texto.toLowerCase().includes("foto") || texto.toLowerCase().includes("imagem")) return "Imagem enviada";
+  if (texto.toLowerCase().includes("arquivo") || texto.toLowerCase().includes("documento")) return "Arquivo enviado";
 
   return texto || "Sem mensagens";
 }
+
+function iconeUltimaMensagem(conversa) {
+  const tipo = conversa.ultimaMensagemTipo || "";
+  const texto = String(conversa.ultimaMensagem || "").toLowerCase();
+
+  if (tipo === "imagem" || texto.includes("foto") || texto.includes("imagem")) return svgIcon("imagem", 18);
+  if (tipo === "audio" || texto.includes("áudio")) return svgIcon("audio", 18);
+  if (tipo === "video") return svgIcon("video", 18);
+  if (tipo === "arquivo" || texto.includes("arquivo") || texto.includes("documento")) return svgIcon("clip", 18);
+
+  return "";
+}
+
 function renderizarConversas() {
   const lista = filtrarConversas();
 
@@ -231,6 +265,8 @@ function renderizarConversas() {
       item.classList.add("active");
     }
 
+    const iconeUltima = iconeUltimaMensagem(conversa);
+
     const badge =
       conversa.mensagensNaoLidas > 0
         ? `<span class="conversa-badge">${conversa.mensagensNaoLidas}</span>`
@@ -248,11 +284,11 @@ function renderizarConversas() {
         </div>
 
         <div class="conversa-footer">
-          <p class="conversa-ultima-msg">${escaparHTML(formatarUltimaMensagem(conversa))}</p>
+          <p class="conversa-ultima-msg">${iconeUltima}<span>${escaparHTML(formatarUltimaMensagem(conversa))}</span></p>
           ${badge}
         </div>
 
-        ${conversa.atendenteNome ? `<small class="conversa-atendente">👤 ${escaparHTML(conversa.atendenteNome)}</small>` : ""}
+        ${conversa.atendenteNome ? `<small class="conversa-atendente">${svgIcon("usuario", 15)} <span>${escaparHTML(conversa.atendenteNome)}</span></small>` : ""}
       </div>
 
       <div class="conversa-status ${conversa.status || "aguardando"}"></div>
@@ -322,16 +358,17 @@ async function carregarMensagens(conversaId) {
 function iconeArquivo(mimeType = "", nomeArquivo = "") {
   const nome = nomeArquivo.toLowerCase();
 
-  if (mimeType.includes("pdf") || nome.endsWith(".pdf")) return "📄";
-  if (mimeType.includes("word") || nome.endsWith(".doc") || nome.endsWith(".docx")) return "📝";
-  if (mimeType.includes("excel") || nome.endsWith(".xls") || nome.endsWith(".xlsx")) return "📊";
-  if (mimeType.includes("zip") || nome.endsWith(".zip") || nome.endsWith(".rar")) return "🗜️";
-  if (mimeType.includes("video")) return "🎬";
-  if (mimeType.includes("audio")) return "🎧";
-  if (mimeType.includes("image")) return "🖼️";
+  if (mimeType.includes("pdf") || nome.endsWith(".pdf")) return svgIcon("pdf", 24);
+  if (mimeType.includes("word") || nome.endsWith(".doc") || nome.endsWith(".docx")) return svgIcon("texto", 24);
+  if (mimeType.includes("excel") || nome.endsWith(".xls") || nome.endsWith(".xlsx")) return svgIcon("planilha", 24);
+  if (mimeType.includes("zip") || nome.endsWith(".zip") || nome.endsWith(".rar")) return svgIcon("zip", 24);
+  if (mimeType.includes("video")) return svgIcon("video", 24);
+  if (mimeType.includes("audio")) return svgIcon("audio", 24);
+  if (mimeType.includes("image")) return svgIcon("imagem", 24);
 
-  return "📎";
+  return svgIcon("clip", 24);
 }
+
 function adicionarMensagemNaTela(mensagem) {
   const div = document.createElement("div");
   div.className = `mensagem ${mensagem.origem === "atendente" ? "atendente" : mensagem.origem === "sistema" ? "sistema" : "cliente"}`;
@@ -1137,6 +1174,7 @@ async function excluirAtendente(id, nome) {
 }
 function configurarEventos() {
   btnSair.addEventListener("click", sair);
+  btnLogoutMobile?.addEventListener("click", sair);
   btnEnviar.addEventListener("click", enviarMensagem);
   chatInput.addEventListener("input", () => {
     ajustarAlturaTextarea();

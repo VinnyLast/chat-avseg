@@ -3044,3 +3044,54 @@ body.modal-aberto {
         min-width: 42px;
     }
 }
+/* =============================================================================
+   BOTÃO SAIR MOBILE
+   ============================================================================= */
+
+.conversas-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.btn-logout-mobile {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .btn-logout-mobile {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 1px solid var(--border);
+        background: #0f0f0f;
+        color: var(--primary);
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+    .btn-logout-mobile:hover {
+        background: var(--primary);
+        color: #050505;
+    }
+}
+.conversa-ultima-msg {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.conversa-ultima-msg svg {
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.conversa-atendente {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
