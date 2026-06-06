@@ -508,6 +508,19 @@ function iconeUltimaMensagem(conversa) {
   return "";
 }
 
+function separarConversas() {
+  const lista = filtrarConversas();
+
+  function dataOrdem(c) {
+    const d = new Date(c.ultimaMensagemData || c.atualizadoEm || c.criadoEm || 0);
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  }
+
+  const humanos = lista.filter(estaHumanoPendente).sort((a, b) => dataOrdem(b) - dataOrdem(a));
+  const normais = lista.filter((c) => !estaHumanoPendente(c)).sort((a, b) => dataOrdem(b) - dataOrdem(a));
+  return { humanos, normais };
+}
+
 function _renderizarItemConversa(conversa) {
   const item = document.createElement("div");
   item.className = "conversa-item";
@@ -1126,8 +1139,15 @@ function configurarEventos() {
 
   btnAnexar?.addEventListener("click", () => fileAnexo?.click());
   fileAnexo?.addEventListener("change", selecionarArquivo);
-  btnTemplates?.addEventListener("click", () => {
-    templatesRapidos?.style.display === "block" ? esconderTemplatesRapidos() : renderizarTemplatesRapidos("");
+
+  // Usa mousedown para não conflitar com o click global que fecha o painel
+  btnTemplates?.addEventListener("mousedown", (e) => {
+    e.preventDefault(); // evita blur no input
+    if (templatesRapidos?.style.display === "block") {
+      esconderTemplatesRapidos();
+    } else {
+      renderizarTemplatesRapidos("");
+    }
   });
 
   chatInput.addEventListener("keydown", (e) => {
@@ -1191,7 +1211,12 @@ function configurarEventos() {
     const templateItem = e.target.closest(".template-item");
     if (templateItem) { inserirTemplate(templateItem.dataset.atalho); return; }
 
-    if (templatesRapidos && !templatesRapidos.contains(e.target) && e.target !== btnTemplates && e.target !== chatInput) esconderTemplatesRapidos();
+    // Fecha templates se clicar fora — mas não fecha se clicar no botão (mousedown já cuida)
+    if (templatesRapidos && templatesRapidos.style.display === "block") {
+      if (!templatesRapidos.contains(e.target) && !btnTemplates?.contains(e.target) && e.target !== chatInput) {
+        esconderTemplatesRapidos();
+      }
+    }
   });
 
   // Modais
