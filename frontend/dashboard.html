@@ -1,323 +1,316 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AVSEG Chat - Dashboard</title>
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AVSEG Chat - Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/etiquetas.css">
 </head>
 <body>
-    <div class="dashboard-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h2 class="brand-title">
-  <img src="assets/logo-avseg.png" alt="AVSEG" class="brand-logo">
-  <span>AVSEG Chat</span>
-</h2>
-                <div class="user-info">
-                    <span id="userName">Carregando...</span>
-                    <button id="btnSair" class="btn-secondary-small">Sair</button>
-                </div>
-            </div>
-            
-            <div class="sidebar-stats">
-                <div class="stat-card">
-                    <span class="stat-number" id="totalConversas">0</span>
-                    <span class="stat-label">Conversas Ativas</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-number" id="aguardando">0</span>
-                    <span class="stat-label">Aguardando</span>
-                </div>
-            </div>
-            
-            <div class="sidebar-filters">
-                <button class="filter-btn active" data-status="todas">
-                    Todas
-                </button>
-                <button class="filter-btn" data-status="minhas">
-                    Minhas
-                </button>
-                <button class="filter-btn" data-status="aguardando">
-                    Aguardando
-                </button>
-                <button class="filter-btn" data-status="em_atendimento">
-                    Em Atendimento
-                </button>
-                <button class="filter-btn" data-status="finalizada">
-                    Finalizadas
-                </button>
-                <div class="sidebar-admin">
-  <button id="btnAbrirAtendentes" class="btn-admin">
-    <svg class="icon-inline" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-      <circle cx="9" cy="7" r="4"></circle>
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-    </svg>
-    <span>Atendentes</span>
-  </button>
-</div>
-            </div>
-        </aside>
-        
-        <!-- Lista de conversas -->
-        <div class="conversas-list">
-            <div class="conversas-header">
-                <div class="conversas-header-top">
-                    <h3>Conversas</h3>
+  <div class="dashboard-container">
 
-                    <button id="btnLogoutMobile" class="btn-logout-mobile" type="button" title="Sair" aria-label="Sair">
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                            <path d="M16 17l5-5-5-5"></path>
-                            <path d="M21 12H9"></path>
-                        </svg>
-                    </button>
-                </div>
-                <input 
-                    type="text" 
-                    id="searchConversas" 
-                    placeholder="Buscar por nome ou telefone..."
-                    class="search-input"
-                >
-            </div>
-            <div class="mobile-filters">
-  <button class="filter-btn-mobile active" data-status="todas">Todas</button>
-  <button class="filter-btn-mobile" data-status="minhas">Minhas</button>
-  <button class="filter-btn-mobile" data-status="aguardando">Aguardando</button>
-  <button class="filter-btn-mobile" data-status="em_atendimento">Em atendimento</button>
-  <button class="filter-btn-mobile" data-status="finalizada">Finalizadas</button>
-</div>
-            
-            <div id="listaConversas" class="conversas-items">
-                <div class="loading">Carregando conversas...</div>
-            </div>
+    <!-- =========================================================
+         SIDEBAR
+         ========================================================= -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2 class="brand-title">
+          <img src="assets/logo-avseg.png" alt="AVSEG" class="brand-logo">
+          <span>AVSEG Chat</span>
+        </h2>
+        <div class="user-info">
+          <span id="userName">Carregando...</span>
+          <button id="btnSair" class="btn-secondary-small">Sair</button>
         </div>
-        
-        <!-- Área de chat -->
-        <div class="chat-container">
-            <div id="chatVazio" class="chat-vazio">
-                <div class="chat-vazio-content">
-                    <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                    </svg>
-                    <h3>Selecione uma conversa</h3>
-                    <p>Escolha uma conversa da lista ao lado para começar</p>
-                </div>
-            </div>
-            
-            <div id="chatAtivo" class="chat-ativo" style="display: none;">
-                <!-- Header do chat -->
-                <div class="chat-header">
-                    <button id="btnVoltarConversas" class="btn-voltar-mobile" type="button" aria-label="Voltar para conversas">
-  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-    <path d="M19 12H5"></path>
-    <path d="M12 19l-7-7 7-7"></path>
-  </svg>
-</button>
-                    <div class="chat-header-info">
-                        <div class="avatar">
-                            <span id="chatClienteInicial">C</span>
-                        </div>
-                        <div class="chat-header-text">
-                            <h3 id="chatClienteNome">Cliente</h3>
-                            <span id="chatClienteTelefone" class="chat-telefone">-</span>
-                            <p id="chatAtendenteInfo" class="chat-atendente-info">Sem atendente responsável</p>
-                        </div>
-                    </div>
-                    
-                    <div class="chat-header-actions">
-                        <select id="chatStatus" class="status-select">
-                            <option value="aguardando">Aguardando</option>
-                            <option value="em_atendimento">Em Atendimento</option>
-                            <option value="finalizada">Finalizada</option>
-                        </select>
-                        
-                        <button id="btnAtribuir" class="btn-secondary-small">
-                            Assumir Conversa
-                        </button>
+      </div>
 
-                        <button id="btnFinalizarConversa" class="btn-chat-action btn-finalizar" type="button">
-                            Finalizar
-                        </button>
-
-                        <button id="btnTransferirConversa" class="btn-chat-action btn-transferir" type="button">
-                            Transferir
-                        </button>
-
-                        <button id="btnReabrirConversa" class="btn-chat-action btn-reabrir" type="button" style="display: none;">
-                            Reabrir
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Mensagens -->
-                <div id="chatMensagens" class="chat-mensagens">
-                    <!-- Mensagens serão carregadas aqui -->
-                </div>
-                
-                <!-- Input de mensagem -->
-                <div id="anexoPreview" class="anexo-preview" style="display: none;"></div>
-
-                <div id="templatesRapidos" class="templates-rapidos" style="display: none;"></div>
-
-                <div class="chat-input-container">
-                    <input type="file" id="fileAnexo" style="display: none;" />
-
-                    <button id="btnAnexar" class="btn-input-action" type="button" title="Anexar arquivo" aria-label="Anexar arquivo">
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-                        </svg>
-                    </button>
-
-                    <button id="btnTemplates" class="btn-input-action" type="button" title="Respostas rápidas" aria-label="Respostas rápidas">
-                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                            <path d="M13 2L3 14h8l-1 8 11-14h-8l1-6z"></path>
-                        </svg>
-                    </button>
-
-                    <textarea 
-                        id="chatInput" 
-                        placeholder="Digite sua mensagem... ou / para respostas rápidas"
-                        rows="1"
-                    ></textarea>
-                    <button id="btnEnviar" class="btn-enviar" type="button" aria-label="Enviar mensagem">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="22" y1="2" x2="11" y2="13"></line>
-                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                        </svg>
-                    </button>
-                </div>
-            </div>
+      <div class="sidebar-stats">
+        <div class="stat-card">
+          <span class="stat-number" id="totalConversas">0</span>
+          <span class="stat-label">Conversas Ativas</span>
         </div>
+        <div class="stat-card">
+          <span class="stat-number" id="aguardando">0</span>
+          <span class="stat-label">Aguardando</span>
+        </div>
+      </div>
+
+      <div class="sidebar-filters">
+        <button class="filter-btn active" data-status="todas">Todas</button>
+        <button class="filter-btn" data-status="minhas">Minhas</button>
+        <button class="filter-btn" data-status="aguardando">Aguardando</button>
+        <button class="filter-btn" data-status="em_atendimento">Em Atendimento</button>
+        <button class="filter-btn" data-status="finalizada">Finalizadas</button>
+
+        <div class="sidebar-admin">
+          <button id="btnAbrirAtendentes" class="btn-admin">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span>Atendentes</span>
+          </button>
+
+          <button id="btnAbrirEtiquetas" class="btn-admin-etiquetas" style="display:none;">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+              <line x1="7" y1="7" x2="7.01" y2="7"></line>
+            </svg>
+            <span>Etiquetas</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filtro por etiqueta -->
+      <div id="sidebarEtiquetasFiltro" class="sidebar-etiquetas-filtro"></div>
+    </aside>
+
+    <!-- =========================================================
+         LISTA DE CONVERSAS
+         ========================================================= -->
+    <div class="conversas-list">
+      <div class="conversas-header">
+        <div class="conversas-header-top">
+          <h3>Conversas</h3>
+          <button id="btnLogoutMobile" class="btn-logout-mobile" type="button" title="Sair" aria-label="Sair">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <path d="M16 17l5-5-5-5"></path>
+              <path d="M21 12H9"></path>
+            </svg>
+          </button>
+        </div>
+        <input type="text" id="searchConversas" placeholder="Buscar por nome ou telefone..." class="search-input">
+      </div>
+
+      <div class="mobile-filters">
+        <button class="filter-btn-mobile active" data-status="todas">Todas</button>
+        <button class="filter-btn-mobile" data-status="minhas">Minhas</button>
+        <button class="filter-btn-mobile" data-status="aguardando">Aguardando</button>
+        <button class="filter-btn-mobile" data-status="em_atendimento">Em atendimento</button>
+        <button class="filter-btn-mobile" data-status="finalizada">Finalizadas</button>
+      </div>
+
+      <div id="listaConversas" class="conversas-items">
+        <div class="loading">Carregando conversas...</div>
+      </div>
     </div>
-    
-    <!-- Template de mensagem -->
-    <template id="mensagemTemplate">
-        <div class="mensagem">
-            <div class="mensagem-conteudo">
-                <p class="mensagem-texto"></p>
-                <span class="mensagem-hora"></span>
-            </div>
-        </div>
-    </template>
-    
-    <!-- Template de conversa -->
-    <template id="conversaTemplate">
-        <div class="conversa-item" data-conversa-id="">
-            <div class="conversa-avatar">
-                <span class="conversa-inicial"></span>
-            </div>
-            <div class="conversa-info">
-                <div class="conversa-header">
-                    <h4 class="conversa-nome"></h4>
-                    <span class="conversa-hora"></span>
-                </div>
-                <div class="conversa-footer">
-                    <p class="conversa-ultima-msg"></p>
-                    <span class="conversa-badge" style="display: none;">0</span>
-                </div>
-            </div>
-            <div class="conversa-status"></div>
-        </div>
-    </template>
-    <!-- Modal de visualização de imagem -->
-<div id="modalImagem" class="modal-imagem-overlay" style="display: none;">
-  <div class="modal-imagem-card">
-    <button id="btnFecharImagem" class="modal-imagem-fechar">×</button>
 
-    <img id="imagemAmpliada" src="" alt="Imagem ampliada">
+    <!-- =========================================================
+         ÁREA DE CHAT
+         ========================================================= -->
+    <div class="chat-container">
+      <!-- Estado vazio -->
+      <div id="chatVazio" class="chat-vazio">
+        <div class="chat-vazio-content">
+          <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <h3>Selecione uma conversa</h3>
+          <p>Escolha uma conversa da lista ao lado para começar</p>
+        </div>
+      </div>
 
-    <div class="modal-imagem-actions">
-      <button id="btnBaixarImagem" class="btn-download-imagem">
-        Baixar imagem
-      </button>
+      <!-- Chat ativo -->
+      <div id="chatAtivo" class="chat-ativo" style="display:none;">
+
+        <!-- Header -->
+        <div class="chat-header">
+          <button id="btnVoltarConversas" class="btn-voltar-mobile" type="button" aria-label="Voltar para conversas">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <path d="M19 12H5"></path>
+              <path d="M12 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+
+          <div class="chat-header-info">
+            <div class="avatar">
+              <span id="chatClienteInicial">C</span>
+            </div>
+            <div class="chat-header-text">
+              <h3 id="chatClienteNome">Cliente</h3>
+              <span id="chatClienteTelefone" class="chat-telefone">-</span>
+              <p id="chatAtendenteInfo" class="chat-atendente-info">Sem atendente responsável</p>
+              <!-- Etiquetas do chat -->
+              <div id="chatEtiquetasRow" class="chat-etiquetas-row"></div>
+            </div>
+          </div>
+
+          <div class="chat-header-actions">
+            <select id="chatStatus" class="status-select">
+              <option value="aguardando">Aguardando</option>
+              <option value="em_atendimento">Em Atendimento</option>
+              <option value="finalizada">Finalizada</option>
+            </select>
+            <button id="btnAtribuir" class="btn-secondary-small">Assumir</button>
+            <button id="btnFinalizarConversa" class="btn-chat-action btn-finalizar" type="button">Finalizar</button>
+            <button id="btnTransferirConversa" class="btn-chat-action btn-transferir" type="button">Transferir</button>
+            <button id="btnReabrirConversa" class="btn-chat-action btn-reabrir" type="button" style="display:none;">Reabrir</button>
+          </div>
+        </div>
+
+        <!-- Mensagens -->
+        <div id="chatMensagens" class="chat-mensagens"></div>
+
+        <!-- Preview de anexo -->
+        <div id="anexoPreview" class="anexo-preview" style="display:none;"></div>
+
+        <!-- Templates rápidos -->
+        <div id="templatesRapidos" class="templates-rapidos" style="display:none;"></div>
+
+        <!-- Input -->
+        <div class="chat-input-container">
+          <input type="file" id="fileAnexo" style="display:none;">
+
+          <button id="btnAnexar" class="btn-input-action" type="button" title="Anexar arquivo" aria-label="Anexar arquivo">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+            </svg>
+          </button>
+
+          <button id="btnTemplates" class="btn-input-action" type="button" title="Respostas rápidas" aria-label="Respostas rápidas">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M13 2L3 14h8l-1 8 11-14h-8l1-6z"></path>
+            </svg>
+          </button>
+
+          <textarea id="chatInput" placeholder="Digite sua mensagem... ou / para respostas rápidas" rows="1"></textarea>
+
+          <button id="btnEnviar" class="btn-enviar" type="button" aria-label="Enviar mensagem">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
-</div>
-<div id="modalAtendentes" class="modal-overlay" style="display: none;">
-  <div class="modal-card">
-    <div class="modal-header">
-      <div>
-        <h3>Atendentes</h3>
-        <p>Gerencie os usuários que acessam o chat AVSEG</p>
+
+  <!-- =============================================================
+       MODAL — IMAGEM AMPLIADA
+       ============================================================= -->
+  <div id="modalImagem" class="modal-imagem-overlay" style="display:none;">
+    <div class="modal-imagem-card">
+      <button id="btnFecharImagem" class="modal-imagem-fechar">×</button>
+      <img id="imagemAmpliada" src="" alt="Imagem ampliada">
+      <div class="modal-imagem-actions">
+        <button id="btnBaixarImagem" class="btn-download-imagem">Baixar imagem</button>
       </div>
-
-      <button id="btnFecharAtendentes" class="btn-icon" type="button">
-        ×
-      </button>
-    </div>
-
-    <form id="formNovoAtendente" class="form-atendente">
-      <div class="form-row">
-        <div class="form-group">
-          <label for="novoNome">Nome</label>
-          <input type="text" id="novoNome" placeholder="Nome do atendente" required>
-        </div>
-
-        <div class="form-group">
-          <label for="novoEmail">Email</label>
-          <input type="email" id="novoEmail" placeholder="email@avseg.com" required>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="novaSenha">Senha inicial</label>
-          <input type="password" id="novaSenha" placeholder="Senha inicial" required>
-        </div>
-
-        <div class="form-group">
-          <label for="novoRole">Tipo</label>
-          <select id="novoRole">
-            <option value="atendente">Atendente</option>
-            <option value="admin">Administrador</option>
-          </select>
-        </div>
-      </div>
-
-      <div id="erroAtendente" class="erro-mensagem" style="display: none;"></div>
-
-      <button type="submit" class="btn-primary">
-        Criar usuário
-      </button>
-    </form>
-
-    <div class="lista-atendentes-header">
-      <h4>Usuários cadastrados</h4>
-    </div>
-
-    <div id="listaAtendentes" class="lista-atendentes">
-      <div class="loading">Carregando atendentes...</div>
     </div>
   </div>
-</div>
 
-<div id="modalTransferir" class="modal-overlay" style="display: none;">
-  <div class="modal-card modal-transferir-card">
-    <div class="modal-header">
-      <div>
-        <h3>Transferir conversa</h3>
-        <p>Escolha o atendente que ficará responsável por este atendimento.</p>
+  <!-- =============================================================
+       MODAL — ATENDENTES
+       ============================================================= -->
+  <div id="modalAtendentes" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h3>Atendentes</h3>
+          <p>Gerencie os usuários que acessam o chat AVSEG</p>
+        </div>
+        <button id="btnFecharAtendentes" class="btn-icon" type="button">×</button>
       </div>
 
-      <button id="btnFecharTransferir" class="btn-icon" type="button">
-        ×
-      </button>
-    </div>
+      <form id="formNovoAtendente" class="form-atendente">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="novoNome">Nome</label>
+            <input type="text" id="novoNome" placeholder="Nome do atendente" required>
+          </div>
+          <div class="form-group">
+            <label for="novoEmail">Email</label>
+            <input type="email" id="novoEmail" placeholder="email@avseg.com" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="novaSenha">Senha inicial</label>
+            <input type="password" id="novaSenha" placeholder="Senha inicial" required>
+          </div>
+          <div class="form-group">
+            <label for="novoRole">Tipo</label>
+            <select id="novoRole">
+              <option value="atendente">Atendente</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+        </div>
+        <div id="erroAtendente" class="erro-mensagem" style="display:none;"></div>
+        <button type="submit" class="btn-primary">Criar usuário</button>
+      </form>
 
-    <div id="erroTransferir" class="erro-mensagem" style="display: none;"></div>
-
-    <div id="listaTransferirAtendentes" class="lista-transferir-atendentes">
-      <div class="loading">Carregando atendentes...</div>
+      <div class="lista-atendentes-header"><h4>Usuários cadastrados</h4></div>
+      <div id="listaAtendentes" class="lista-atendentes">
+        <div class="loading">Carregando atendentes...</div>
+      </div>
     </div>
   </div>
-</div>
 
-    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-<script src="js/notifications.js"></script>  <!-- ← adicionar -->
-<script src="js/dashboard.js"></script>
+  <!-- =============================================================
+       MODAL — TRANSFERIR CONVERSA
+       ============================================================= -->
+  <div id="modalTransferir" class="modal-overlay" style="display:none;">
+    <div class="modal-card modal-transferir-card">
+      <div class="modal-header">
+        <div>
+          <h3>Transferir conversa</h3>
+          <p>Escolha o atendente responsável por este atendimento.</p>
+        </div>
+        <button id="btnFecharTransferir" class="btn-icon" type="button">×</button>
+      </div>
+      <div id="erroTransferir" class="erro-mensagem" style="display:none;"></div>
+      <div id="listaTransferirAtendentes" class="lista-transferir-atendentes">
+        <div class="loading">Carregando atendentes...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============================================================
+       MODAL — ETIQUETAS (admin)
+       ============================================================= -->
+  <div id="modalEtiquetas" class="modal-overlay" style="display:none;">
+    <div class="modal-card modal-etiquetas-card">
+      <div class="modal-header">
+        <div>
+          <h3>Etiquetas</h3>
+          <p>Crie e gerencie etiquetas para classificar conversas</p>
+        </div>
+        <button id="btnFecharEtiquetas" class="btn-icon" type="button">×</button>
+      </div>
+
+      <form id="formNovaEtiqueta" class="etiquetas-form">
+        <div class="form-group">
+          <label for="novaEtiquetaNome">Nome da etiqueta</label>
+          <input type="text" id="novaEtiquetaNome" placeholder="Ex: Urgente, Sinistro..." required maxlength="30">
+        </div>
+        <div class="form-group">
+          <label for="novaEtiquetaCor">Cor</label>
+          <div class="input-cor-wrapper">
+            <input type="color" id="novaEtiquetaCor" class="input-cor" value="#f5c400">
+          </div>
+        </div>
+        <button type="submit" class="btn-primary" style="align-self:flex-end;padding:12px 20px;">Criar</button>
+      </form>
+
+      <div id="erroEtiqueta" class="erro-mensagem" style="display:none;margin-bottom:12px;"></div>
+
+      <div class="lista-atendentes-header"><h4>Etiquetas criadas</h4></div>
+      <div id="listaEtiquetasAdmin" class="lista-etiquetas-admin">
+        <div class="loading">Carregando etiquetas...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =============================================================
+       SCRIPTS
+       ============================================================= -->
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/dashboard.js"></script>
 </body>
 </html>

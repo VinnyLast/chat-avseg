@@ -1,0 +1,381 @@
+/* =============================================================================
+   AVSEG CHAT — etiquetas.css
+   Cole no final do style.css
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   TAGS NA LISTA DE CONVERSAS
+   ----------------------------------------------------------------------------- */
+.conversa-etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.etiqueta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  opacity: 0.92;
+  transition: opacity 0.15s;
+}
+
+.etiqueta-tag:hover {
+  opacity: 1;
+}
+
+/* Ponto colorido dentro da tag */
+.etiqueta-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: currentColor;
+  opacity: 0.7;
+}
+
+/* -----------------------------------------------------------------------------
+   ETIQUETAS NO HEADER DO CHAT
+   ----------------------------------------------------------------------------- */
+.chat-etiquetas-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.chat-etiqueta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: default;
+  transition: all 0.15s;
+}
+
+.chat-etiqueta-remover {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+  transition: background 0.15s;
+}
+
+.chat-etiqueta-remover:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* Botão "+" para adicionar etiqueta */
+.btn-adicionar-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-adicionar-etiqueta:hover {
+  border-color: var(--yellow-border);
+  color: var(--primary);
+  background: var(--yellow-soft);
+}
+
+/* -----------------------------------------------------------------------------
+   DROPDOWN DE SELEÇÃO DE ETIQUETAS
+   ----------------------------------------------------------------------------- */
+.etiquetas-dropdown {
+  position: absolute;
+  z-index: 200;
+  min-width: 220px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: #0f0f0f;
+  border: 1px solid var(--yellow-border);
+  border-radius: 14px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65);
+  padding: 8px;
+  top: calc(100% + 6px);
+  left: 0;
+}
+
+.etiquetas-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.etiquetas-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.etiquetas-dropdown-item.aplicada {
+  color: var(--primary);
+}
+
+.etiquetas-dropdown-item.aplicada::after {
+  content: "✓";
+  margin-left: auto;
+  font-size: 14px;
+}
+
+.etiqueta-cor-bolinha {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.etiquetas-dropdown-vazio {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* Wrapper com position relative para o dropdown */
+.etiquetas-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* -----------------------------------------------------------------------------
+   MODAL DE GERENCIAMENTO DE ETIQUETAS (admin)
+   ----------------------------------------------------------------------------- */
+.modal-etiquetas-card {
+  max-width: 560px;
+}
+
+.etiquetas-form {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.etiquetas-form .form-group {
+  flex: 1;
+  min-width: 140px;
+}
+
+.input-cor-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-cor {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #0f0f0f;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.input-cor::-webkit-color-swatch-wrapper { padding: 0; }
+.input-cor::-webkit-color-swatch { border-radius: 8px; border: none; }
+
+.lista-etiquetas-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.etiqueta-admin-item {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #0f0f0f;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: border-color 0.15s;
+}
+
+.etiqueta-admin-item:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.etiqueta-admin-cor {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.etiqueta-admin-nome {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.etiqueta-admin-acoes {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-excluir-etiqueta {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ff8a8a;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-excluir-etiqueta:hover {
+  background: #ef4444;
+  color: white;
+}
+
+/* Botão de etiquetas na sidebar admin */
+.btn-admin-etiquetas {
+  width: 100%;
+  background: rgba(168, 85, 247, 0.1);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  text-align: left;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-admin-etiquetas:hover {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.5);
+}
+
+/* Filtro por etiqueta na sidebar */
+.sidebar-etiquetas-filtro {
+  padding: 0 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-etiquetas-titulo {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.filtro-etiqueta-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+  width: 100%;
+}
+
+.filtro-etiqueta-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.filtro-etiqueta-btn.active {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-primary);
+}
+
+.filtro-etiqueta-bolinha {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* -----------------------------------------------------------------------------
+   RESPONSIVO
+   ----------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .chat-etiquetas-row {
+    margin-top: 4px;
+    gap: 4px;
+  }
+
+  .chat-etiqueta-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+
+  .btn-adicionar-etiqueta {
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+
+  .etiquetas-dropdown {
+    min-width: 180px;
+  }
+
+  .etiquetas-form {
+    flex-direction: column;
+  }
+}

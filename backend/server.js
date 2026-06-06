@@ -14,10 +14,7 @@ const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST", "PATCH", "DELETE"],
-  },
+  cors: { origin: "*", methods: ["GET", "POST", "PATCH", "DELETE"] },
 });
 
 // =============================================================================
@@ -67,30 +64,22 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 25 * 1024 * 1024, // 25MB
-  },
-});
+const upload = multer({ storage, limits: { fileSize: 25 * 1024 * 1024 } });
 
 // =============================================================================
-// BANCO DE DADOS SIMPLES (JSON)
+// BANCO DE DADOS (JSON)
 // =============================================================================
 const ARQUIVOS_DB = {
-  usuarios: path.join(DB_PATH, "usuarios.json"),
+  usuarios:  path.join(DB_PATH, "usuarios.json"),
   conversas: path.join(DB_PATH, "conversas.json"),
   mensagens: path.join(DB_PATH, "mensagens.json"),
-  clientes: path.join(DB_PATH, "clientes.json"),
+  clientes:  path.join(DB_PATH, "clientes.json"),
+  etiquetas: path.join(DB_PATH, "etiquetas.json"),
 };
 
 function carregarDB(arquivo) {
   try {
-    if (!fs.existsSync(arquivo)) {
-      fs.writeFileSync(arquivo, JSON.stringify([], null, 2));
-      return [];
-    }
-
+    if (!fs.existsSync(arquivo)) { fs.writeFileSync(arquivo, JSON.stringify([], null, 2)); return []; }
     const conteudo = fs.readFileSync(arquivo, "utf8");
     return JSON.parse(conteudo || "[]");
   } catch (erro) {
@@ -116,22 +105,13 @@ function gerarId() {
 
 function normalizarTelefone(telefone) {
   let digitos = String(telefone || "").replace(/\D/g, "");
-
   if (!digitos) return "";
-
-  if (!digitos.startsWith("55")) {
-    digitos = `55${digitos}`;
-  }
-
+  if (!digitos.startsWith("55")) digitos = `55${digitos}`;
   if (digitos.length === 12) {
     const ddd = digitos.slice(2, 4);
     const numero = digitos.slice(4);
-
-    if (!numero.startsWith("9")) {
-      digitos = `55${ddd}9${numero}`;
-    }
+    if (!numero.startsWith("9")) digitos = `55${ddd}9${numero}`;
   }
-
   return digitos;
 }
 
@@ -148,18 +128,13 @@ function detectarTipoPorMime(mimeType = "") {
 
 function buscarAtendenteNome(usuarios, atendenteId) {
   if (!atendenteId) return null;
-
-  const atendente = usuarios.find((u) => u.id === atendenteId);
-  return atendente?.nome || null;
+  return usuarios.find((u) => u.id === atendenteId)?.nome || null;
 }
 
 function montarConversaDetalhada(conversa, mensagens, usuarios) {
   const mensagensConv = mensagens.filter((m) => m.conversaId === conversa.id);
   const ultimaMensagem = mensagensConv[mensagensConv.length - 1];
-
-  const naoLidas = mensagensConv.filter(
-    (m) => !m.lida && m.origem === "cliente"
-  ).length;
+  const naoLidas = mensagensConv.filter((m) => !m.lida && m.origem === "cliente").length;
 
   return {
     ...conversa,
@@ -170,18 +145,17 @@ function montarConversaDetalhada(conversa, mensagens, usuarios) {
     ultimaMensagemData: ultimaMensagem?.criadoEm || conversa.atualizadoEm,
     mensagensNaoLidas: naoLidas,
     totalMensagens: mensagensConv.length,
+    etiquetas: Array.isArray(conversa.etiquetas) ? conversa.etiquetas : [],
   };
 }
 
 // =============================================================================
-// CRIAR ADMIN PADRÃO
+// INICIALIZAÇÃO DE DADOS PADRÃO
 // =============================================================================
 function criarAdminSeNaoExistir() {
   const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-
   if (usuarios.length === 0) {
     const senhaHash = bcrypt.hashSync("admin123", 10);
-
     usuarios.push({
       id: gerarId(),
       nome: "Administrador",
@@ -191,13 +165,22 @@ function criarAdminSeNaoExistir() {
       ativo: true,
       criadoEm: new Date().toISOString(),
     });
-
     salvarDB(ARQUIVOS_DB.usuarios, usuarios);
-
-    console.log("✅ Usuário admin criado:");
-    console.log("   Email: admin@avseg.com");
-    console.log("   Senha: admin123");
+    console.log("✅ Usuário admin criado: admin@avseg.com / admin123");
   }
+}
+
+function criarEtiquetasPadraoSeNaoExistir() {
+  if (fs.existsSync(ARQUIVOS_DB.etiquetas)) return;
+  const etiquetasPadrao = [
+    { id: gerarId(), nome: "Pagamento", cor: "#f5c400", criadoEm: new Date().toISOString() },
+    { id: gerarId(), nome: "Urgente",   cor: "#ef4444", criadoEm: new Date().toISOString() },
+    { id: gerarId(), nome: "Sinistro",  cor: "#3b82f6", criadoEm: new Date().toISOString() },
+    { id: gerarId(), nome: "Vistoria",  cor: "#22c55e", criadoEm: new Date().toISOString() },
+    { id: gerarId(), nome: "Cotação",   cor: "#a855f7", criadoEm: new Date().toISOString() },
+  ];
+  salvarDB(ARQUIVOS_DB.etiquetas, etiquetasPadrao);
+  console.log("✅ Etiquetas padrão criadas.");
 }
 
 // =============================================================================
@@ -205,16 +188,11 @@ function criarAdminSeNaoExistir() {
 // =============================================================================
 function autenticar(req, res, next) {
   const token = req.headers.authorization?.replace("Bearer ", "");
-
-  if (!token) {
-    return res.status(401).json({ erro: "Token não fornecido" });
-  }
-
+  if (!token) return res.status(401).json({ erro: "Token não fornecido" });
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.usuario = decoded;
+    req.usuario = jwt.verify(token, JWT_SECRET);
     next();
-  } catch (erro) {
+  } catch (_) {
     return res.status(401).json({ erro: "Token inválido" });
   }
 }
@@ -224,122 +202,50 @@ function autenticar(req, res, next) {
 // =============================================================================
 app.post("/api/auth/login", (req, res) => {
   const { email, senha } = req.body;
-
-  if (!email || !senha) {
-    return res.status(400).json({ erro: "Email e senha são obrigatórios" });
-  }
+  if (!email || !senha) return res.status(400).json({ erro: "Email e senha são obrigatórios" });
 
   const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
   const usuario = usuarios.find((u) => u.email === email && u.ativo !== false);
+  if (!usuario) return res.status(401).json({ erro: "Credenciais inválidas" });
 
-  if (!usuario) {
-    return res.status(401).json({ erro: "Credenciais inválidas" });
-  }
+  if (!bcrypt.compareSync(senha, usuario.senha)) return res.status(401).json({ erro: "Credenciais inválidas" });
 
-  const senhaValida = bcrypt.compareSync(senha, usuario.senha);
-
-  if (!senhaValida) {
-    return res.status(401).json({ erro: "Credenciais inválidas" });
-  }
-
-  const token = jwt.sign(
-    {
-      id: usuario.id,
-      email: usuario.email,
-      role: usuario.role,
-    },
-    JWT_SECRET,
-    { expiresIn: "24h" }
-  );
-
-  res.json({
-    token,
-    usuario: {
-      id: usuario.id,
-      nome: usuario.nome,
-      email: usuario.email,
-      role: usuario.role,
-    },
-  });
+  const token = jwt.sign({ id: usuario.id, email: usuario.email, role: usuario.role }, JWT_SECRET, { expiresIn: "24h" });
+  res.json({ token, usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, role: usuario.role } });
 });
 
 app.post("/api/auth/registrar", autenticar, (req, res) => {
-  if (req.usuario.role !== "admin") {
-    return res.status(403).json({ erro: "Sem permissão" });
-  }
-
+  if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Sem permissão" });
   const { nome, email, senha, role } = req.body;
-
-  if (!nome || !email || !senha) {
-    return res.status(400).json({ erro: "Dados incompletos" });
-  }
-
-  if (senha.length < 6) {
-    return res.status(400).json({ erro: "A senha precisa ter pelo menos 6 caracteres" });
-  }
+  if (!nome || !email || !senha) return res.status(400).json({ erro: "Dados incompletos" });
+  if (senha.length < 6) return res.status(400).json({ erro: "A senha precisa ter pelo menos 6 caracteres" });
 
   const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
+  if (usuarios.find((u) => u.email === email && u.ativo !== false)) return res.status(400).json({ erro: "Email já cadastrado" });
 
-  if (usuarios.find((u) => u.email === email && u.ativo !== false)) {
-    return res.status(400).json({ erro: "Email já cadastrado" });
-  }
-
-  const senhaHash = bcrypt.hashSync(senha, 10);
-
-  const novoUsuario = {
-    id: gerarId(),
-    nome,
-    email,
-    senha: senhaHash,
-    role: role || "atendente",
-    ativo: true,
-    criadoEm: new Date().toISOString(),
-  };
-
+  const novoUsuario = { id: gerarId(), nome, email, senha: bcrypt.hashSync(senha, 10), role: role || "atendente", ativo: true, criadoEm: new Date().toISOString() };
   usuarios.push(novoUsuario);
   salvarDB(ARQUIVOS_DB.usuarios, usuarios);
-
-  res.json({
-    id: novoUsuario.id,
-    nome: novoUsuario.nome,
-    email: novoUsuario.email,
-    role: novoUsuario.role,
-  });
+  res.json({ id: novoUsuario.id, nome: novoUsuario.nome, email: novoUsuario.email, role: novoUsuario.role });
 });
 
 app.get("/api/auth/verificar", autenticar, (req, res) => {
   const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
   const usuario = usuarios.find((u) => u.id === req.usuario.id && u.ativo !== false);
-
-  if (!usuario) {
-    return res.status(401).json({ erro: "Usuário não encontrado" });
-  }
-
-  res.json({
-    usuario: {
-      id: usuario.id,
-      nome: usuario.nome,
-      email: usuario.email,
-      role: usuario.role,
-    },
-  });
+  if (!usuario) return res.status(401).json({ erro: "Usuário não encontrado" });
+  res.json({ usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, role: usuario.role } });
 });
 
 // =============================================================================
 // ROTAS DE UPLOAD
 // =============================================================================
 app.post("/api/upload", autenticar, upload.single("arquivo"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ erro: "Arquivo não enviado" });
-  }
-
-  const arquivoUrl = `${baseUrlReq(req)}/uploads/${req.file.filename}`;
+  if (!req.file) return res.status(400).json({ erro: "Arquivo não enviado" });
   const mimeType = req.file.mimetype || "application/octet-stream";
-
   res.json({
     ok: true,
     tipo: detectarTipoPorMime(mimeType),
-    arquivoUrl,
+    arquivoUrl: `${baseUrlReq(req)}/uploads/${req.file.filename}`,
     mimeType,
     nomeArquivo: req.file.originalname || req.file.filename,
     tamanho: req.file.size,
@@ -352,159 +258,91 @@ app.post("/api/upload", autenticar, upload.single("arquivo"), (req, res) => {
 app.get("/api/conversas", autenticar, (req, res) => {
   const conversas = carregarDB(ARQUIVOS_DB.conversas);
   const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
+  const usuarios  = carregarDB(ARQUIVOS_DB.usuarios);
 
-  const conversasComDetalhes = conversas.map((conv) =>
-    montarConversaDetalhada(conv, mensagens, usuarios)
-  );
-
-  conversasComDetalhes.sort((a, b) => {
-    return new Date(b.ultimaMensagemData) - new Date(a.ultimaMensagemData);
-  });
+  const conversasComDetalhes = conversas
+    .map((conv) => montarConversaDetalhada(conv, mensagens, usuarios))
+    .sort((a, b) => new Date(b.ultimaMensagemData) - new Date(a.ultimaMensagemData));
 
   res.json(conversasComDetalhes);
 });
 
 app.get("/api/conversas/:id", autenticar, (req, res) => {
   const conversas = carregarDB(ARQUIVOS_DB.conversas);
+  const conversa  = conversas.find((c) => c.id === req.params.id);
+  if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada" });
   const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-
-  const conversa = conversas.find((c) => c.id === req.params.id);
-
-  if (!conversa) {
-    return res.status(404).json({ erro: "Conversa não encontrada" });
-  }
-
+  const usuarios  = carregarDB(ARQUIVOS_DB.usuarios);
   res.json(montarConversaDetalhada(conversa, mensagens, usuarios));
 });
 
 app.patch("/api/conversas/:id", autenticar, async (req, res) => {
   const { status, atendenteId, assumir } = req.body;
-
   const conversas = carregarDB(ARQUIVOS_DB.conversas);
   const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-
+  const usuarios  = carregarDB(ARQUIVOS_DB.usuarios);
   const indice = conversas.findIndex((c) => c.id === req.params.id);
-
-  if (indice === -1) {
-    return res.status(404).json({ erro: "Conversa não encontrada" });
-  }
+  if (indice === -1) return res.status(404).json({ erro: "Conversa não encontrada" });
 
   const conversa = conversas[indice];
 
   if (assumir) {
-    if (
-      conversa.atendenteId &&
-      conversa.atendenteId !== req.usuario.id &&
-      conversa.status === "em_atendimento"
-    ) {
+    if (conversa.atendenteId && conversa.atendenteId !== req.usuario.id && conversa.status === "em_atendimento") {
       const atendenteAtual = usuarios.find((u) => u.id === conversa.atendenteId);
-
-      return res.status(409).json({
-        erro: `Essa conversa já está com ${atendenteAtual?.nome || "outro atendente"}.`,
-      });
+      return res.status(409).json({ erro: `Essa conversa já está com ${atendenteAtual?.nome || "outro atendente"}.` });
     }
-
     conversa.atendenteId = req.usuario.id;
     conversa.status = "em_atendimento";
   }
 
   if (status) {
     conversa.status = status;
-
-    if (status === "finalizada") {
-      conversa.finalizadaEm = new Date().toISOString();
-    }
-
-    if (status === "aguardando" || status === "em_atendimento") {
-      conversa.finalizadaEm = null;
-    }
+    if (status === "finalizada") conversa.finalizadaEm = new Date().toISOString();
+    if (status === "aguardando" || status === "em_atendimento") conversa.finalizadaEm = null;
   }
 
-  if (atendenteId !== undefined) {
-    conversa.atendenteId = atendenteId;
-  }
-
+  if (atendenteId !== undefined) conversa.atendenteId = atendenteId;
   conversa.atualizadoEm = new Date().toISOString();
-
   salvarDB(ARQUIVOS_DB.conversas, conversas);
 
   const conversaAtualizada = montarConversaDetalhada(conversa, mensagens, usuarios);
-
   io.emit("conversa_atualizada", conversaAtualizada);
 
-  // Futuro: avisar bot para liberar atendimento automático quando finalizar.
   if (status === "finalizada") {
     try {
       const axios = require("axios");
-      await axios.post(
-        `${WHATSAPP_API_URL}/chat/finalizar`,
-        { telefone: conversa.telefone, conversaId: conversa.id },
-        { headers: { "x-api-key": INTERNAL_API_KEY } }
-      );
-    } catch (erro) {
-      console.error("Aviso ao bot sobre finalização falhou:", erro.response?.data || erro.message);
-    }
+      await axios.post(`${WHATSAPP_API_URL}/chat/finalizar`, { telefone: conversa.telefone, conversaId: conversa.id }, { headers: { "x-api-key": INTERNAL_API_KEY } });
+    } catch (_) {}
   }
 
   res.json(conversaAtualizada);
 });
 
-
-// Transferir conversa para outro atendente
 app.patch("/api/conversas/:id/transferir", autenticar, (req, res) => {
   const { atendenteId } = req.body;
-
-  if (!atendenteId) {
-    return res.status(400).json({ erro: "Informe o atendente de destino." });
-  }
-
-  if (atendenteId === req.usuario.id) {
-    return res.status(400).json({ erro: "Você não pode transferir a conversa para você mesmo." });
-  }
+  if (!atendenteId) return res.status(400).json({ erro: "Informe o atendente de destino." });
+  if (atendenteId === req.usuario.id) return res.status(400).json({ erro: "Você não pode transferir para você mesmo." });
 
   const conversas = carregarDB(ARQUIVOS_DB.conversas);
   const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-
+  const usuarios  = carregarDB(ARQUIVOS_DB.usuarios);
   const indice = conversas.findIndex((c) => c.id === req.params.id);
-
-  if (indice === -1) {
-    return res.status(404).json({ erro: "Conversa não encontrada" });
-  }
+  if (indice === -1) return res.status(404).json({ erro: "Conversa não encontrada" });
 
   const conversa = conversas[indice];
-
-  if (conversa.status === "finalizada") {
-    return res.status(400).json({
-      erro: "Esta conversa está finalizada. Reabra antes de transferir.",
-    });
-  }
+  if (conversa.status === "finalizada") return res.status(400).json({ erro: "Reabra a conversa antes de transferir." });
 
   const usuarioLogado = usuarios.find((u) => u.id === req.usuario.id && u.ativo !== false);
   const destino = usuarios.find((u) => u.id === atendenteId && u.ativo !== false);
+  if (!destino) return res.status(404).json({ erro: "Atendente de destino não encontrado." });
 
-  if (!destino) {
-    return res.status(404).json({ erro: "Atendente de destino não encontrado." });
-  }
-
-  const podeTransferir =
-    usuarioLogado?.role === "admin" ||
-    !conversa.atendenteId ||
-    conversa.atendenteId === req.usuario.id;
-
+  const podeTransferir = usuarioLogado?.role === "admin" || !conversa.atendenteId || conversa.atendenteId === req.usuario.id;
   if (!podeTransferir) {
-    const atendenteAtual = usuarios.find((u) => u.id === conversa.atendenteId);
-
-    return res.status(403).json({
-      erro: `Somente administrador ou o atendente responsável (${atendenteAtual?.nome || "atual"}) pode transferir esta conversa.`,
-    });
+    const atual = usuarios.find((u) => u.id === conversa.atendenteId);
+    return res.status(403).json({ erro: `Somente o admin ou ${atual?.nome || "o responsável"} pode transferir.` });
   }
 
   const atendenteAnterior = usuarios.find((u) => u.id === conversa.atendenteId);
-
   conversa.atendenteId = destino.id;
   conversa.status = "em_atendimento";
   conversa.finalizadaEm = null;
@@ -522,17 +360,11 @@ app.patch("/api/conversas/:id/transferir", autenticar, (req, res) => {
   };
 
   mensagens.push(mensagemSistema);
-
   salvarDB(ARQUIVOS_DB.conversas, conversas);
   salvarDB(ARQUIVOS_DB.mensagens, mensagens);
 
   const conversaAtualizada = montarConversaDetalhada(conversa, mensagens, usuarios);
-
-  io.emit("nova_mensagem", {
-    conversaId: conversa.id,
-    mensagem: mensagemSistema,
-  });
-
+  io.emit("nova_mensagem", { conversaId: conversa.id, mensagem: mensagemSistema });
   io.emit("conversa_atualizada", conversaAtualizada);
 
   res.json(conversaAtualizada);
@@ -543,33 +375,19 @@ app.patch("/api/conversas/:id/transferir", autenticar, (req, res) => {
 // =============================================================================
 app.get("/api/conversas/:id/mensagens", autenticar, (req, res) => {
   const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  const mensagensConv = mensagens.filter((m) => m.conversaId === req.params.id);
-
-  res.json(mensagensConv);
+  res.json(mensagens.filter((m) => m.conversaId === req.params.id));
 });
 
 app.post("/api/conversas/:id/mensagens", autenticar, async (req, res) => {
   const { texto, tipo, arquivoUrl, mimeType, nomeArquivo } = req.body;
-
-  if (!texto && !arquivoUrl) {
-    return res.status(400).json({ erro: "Texto ou arquivo é obrigatório" });
-  }
+  if (!texto && !arquivoUrl) return res.status(400).json({ erro: "Texto ou arquivo é obrigatório" });
 
   const conversas = carregarDB(ARQUIVOS_DB.conversas);
-  const conversa = conversas.find((c) => c.id === req.params.id);
-
-  if (!conversa) {
-    return res.status(404).json({ erro: "Conversa não encontrada" });
-  }
-
-  if (conversa.status === "finalizada") {
-    return res.status(400).json({
-      erro: "Esta conversa está finalizada. Reabra antes de responder.",
-    });
-  }
+  const conversa  = conversas.find((c) => c.id === req.params.id);
+  if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada" });
+  if (conversa.status === "finalizada") return res.status(400).json({ erro: "Conversa finalizada. Reabra antes de responder." });
 
   const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-
   const novaMensagem = {
     id: gerarId(),
     conversaId: conversa.id,
@@ -589,205 +407,197 @@ app.post("/api/conversas/:id/mensagens", autenticar, async (req, res) => {
 
   const indice = conversas.findIndex((c) => c.id === conversa.id);
   conversas[indice].atualizadoEm = new Date().toISOString();
-
-  if (!conversas[indice].atendenteId) {
-    conversas[indice].atendenteId = req.usuario.id;
-  }
-
-  if (conversas[indice].status === "aguardando") {
-    conversas[indice].status = "em_atendimento";
-  }
-
+  if (!conversas[indice].atendenteId) conversas[indice].atendenteId = req.usuario.id;
+  if (conversas[indice].status === "aguardando") conversas[indice].status = "em_atendimento";
   salvarDB(ARQUIVOS_DB.conversas, conversas);
 
-  // Enviar para o WhatsApp via API do bot.
-  // Se o bot ainda só aceitar texto, ele vai ignorar/erro nos campos de mídia sem quebrar o chat.
   try {
     const axios = require("axios");
+    await axios.post(`${WHATSAPP_API_URL}/enviar-mensagem`, {
+      telefone: conversa.telefone,
+      texto: texto || "",
+      tipo: novaMensagem.tipo,
+      arquivoUrl: novaMensagem.arquivoUrl,
+      mimeType: novaMensagem.mimeType,
+      nomeArquivo: novaMensagem.nomeArquivo,
+    }, { headers: { "x-api-key": INTERNAL_API_KEY } });
+  } catch (_) {}
 
-    await axios.post(
-      `${WHATSAPP_API_URL}/enviar-mensagem`,
-      {
-        telefone: conversa.telefone,
-        texto: texto || "",
-        tipo: novaMensagem.tipo,
-        arquivoUrl: novaMensagem.arquivoUrl,
-        mimeType: novaMensagem.mimeType,
-        nomeArquivo: novaMensagem.nomeArquivo,
-      },
-      {
-        headers: {
-          "x-api-key": INTERNAL_API_KEY,
-        },
-      }
-    );
-  } catch (erro) {
-    console.error(
-      "Erro ao enviar para WhatsApp:",
-      erro.response?.data || erro.message
-    );
-  }
-
-  io.emit("nova_mensagem", {
-    conversaId: conversa.id,
-    mensagem: novaMensagem,
-  });
-
+  io.emit("nova_mensagem", { conversaId: conversa.id, mensagem: novaMensagem });
   const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-  const conversaAtualizada = montarConversaDetalhada(
-    conversas[indice],
-    mensagens,
-    usuarios
-  );
-
-  io.emit("conversa_atualizada", conversaAtualizada);
+  io.emit("conversa_atualizada", montarConversaDetalhada(conversas[indice], mensagens, usuarios));
 
   res.json(novaMensagem);
 });
 
 app.patch("/api/conversas/:id/mensagens/marcar-lidas", autenticar, (req, res) => {
   const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-
   let atualizadas = 0;
-
   mensagens.forEach((m) => {
-    if (m.conversaId === req.params.id && !m.lida && m.origem === "cliente") {
-      m.lida = true;
-      atualizadas++;
+    if (m.conversaId === req.params.id && !m.lida && m.origem === "cliente") { m.lida = true; atualizadas++; }
+  });
+  if (atualizadas > 0) salvarDB(ARQUIVOS_DB.mensagens, mensagens);
+  res.json({ mensagensAtualizadas: atualizadas });
+});
+
+// =============================================================================
+// ROTAS DE ETIQUETAS
+// =============================================================================
+app.get("/api/etiquetas", autenticar, (req, res) => {
+  res.json(carregarDB(ARQUIVOS_DB.etiquetas));
+});
+
+app.post("/api/etiquetas", autenticar, (req, res) => {
+  if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Somente administradores podem criar etiquetas." });
+  const { nome, cor } = req.body;
+  if (!nome?.trim()) return res.status(400).json({ erro: "Nome da etiqueta é obrigatório." });
+
+  const etiquetas = carregarDB(ARQUIVOS_DB.etiquetas);
+  if (etiquetas.find((e) => e.nome.toLowerCase() === nome.trim().toLowerCase())) return res.status(400).json({ erro: "Já existe uma etiqueta com este nome." });
+
+  const nova = { id: gerarId(), nome: nome.trim(), cor: cor || "#f5c400", criadoEm: new Date().toISOString() };
+  etiquetas.push(nova);
+  salvarDB(ARQUIVOS_DB.etiquetas, etiquetas);
+  res.json(nova);
+});
+
+app.patch("/api/etiquetas/:id", autenticar, (req, res) => {
+  if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Sem permissão." });
+  const { nome, cor } = req.body;
+  const etiquetas = carregarDB(ARQUIVOS_DB.etiquetas);
+  const indice = etiquetas.findIndex((e) => e.id === req.params.id);
+  if (indice === -1) return res.status(404).json({ erro: "Etiqueta não encontrada." });
+  if (nome) etiquetas[indice].nome = nome.trim();
+  if (cor)  etiquetas[indice].cor  = cor;
+  salvarDB(ARQUIVOS_DB.etiquetas, etiquetas);
+  res.json(etiquetas[indice]);
+});
+
+app.delete("/api/etiquetas/:id", autenticar, (req, res) => {
+  if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Sem permissão." });
+  const etiquetas = carregarDB(ARQUIVOS_DB.etiquetas);
+  const indice = etiquetas.findIndex((e) => e.id === req.params.id);
+  if (indice === -1) return res.status(404).json({ erro: "Etiqueta não encontrada." });
+  etiquetas.splice(indice, 1);
+  salvarDB(ARQUIVOS_DB.etiquetas, etiquetas);
+
+  // Remove da todas as conversas
+  const conversas = carregarDB(ARQUIVOS_DB.conversas);
+  let alterou = false;
+  conversas.forEach((c) => {
+    if (Array.isArray(c.etiquetas) && c.etiquetas.includes(req.params.id)) {
+      c.etiquetas = c.etiquetas.filter((id) => id !== req.params.id);
+      alterou = true;
     }
   });
+  if (alterou) salvarDB(ARQUIVOS_DB.conversas, conversas);
+  res.json({ ok: true });
+});
 
-  if (atualizadas > 0) {
-    salvarDB(ARQUIVOS_DB.mensagens, mensagens);
+// Aplicar etiqueta em conversa
+app.post("/api/conversas/:id/etiquetas", autenticar, (req, res) => {
+  const { etiquetaId } = req.body;
+  if (!etiquetaId) return res.status(400).json({ erro: "etiquetaId é obrigatório." });
+
+  const etiquetas = carregarDB(ARQUIVOS_DB.etiquetas);
+  if (!etiquetas.find((e) => e.id === etiquetaId)) return res.status(404).json({ erro: "Etiqueta não encontrada." });
+
+  const conversas = carregarDB(ARQUIVOS_DB.conversas);
+  const indice = conversas.findIndex((c) => c.id === req.params.id);
+  if (indice === -1) return res.status(404).json({ erro: "Conversa não encontrada." });
+
+  if (!Array.isArray(conversas[indice].etiquetas)) conversas[indice].etiquetas = [];
+  if (!conversas[indice].etiquetas.includes(etiquetaId)) {
+    conversas[indice].etiquetas.push(etiquetaId);
+    conversas[indice].atualizadoEm = new Date().toISOString();
+    salvarDB(ARQUIVOS_DB.conversas, conversas);
   }
 
-  res.json({ mensagensAtualizadas: atualizadas });
+  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
+  const usuarios  = carregarDB(ARQUIVOS_DB.usuarios);
+  const conversaAtualizada = montarConversaDetalhada(conversas[indice], mensagens, usuarios);
+  io.emit("conversa_atualizada", conversaAtualizada);
+  res.json(conversaAtualizada);
+});
+
+// Remover etiqueta de conversa
+app.delete("/api/conversas/:id/etiquetas/:etiquetaId", autenticar, (req, res) => {
+  const conversas = carregarDB(ARQUIVOS_DB.conversas);
+  const indice = conversas.findIndex((c) => c.id === req.params.id);
+  if (indice === -1) return res.status(404).json({ erro: "Conversa não encontrada." });
+
+  if (Array.isArray(conversas[indice].etiquetas)) {
+    conversas[indice].etiquetas = conversas[indice].etiquetas.filter((id) => id !== req.params.etiquetaId);
+    conversas[indice].atualizadoEm = new Date().toISOString();
+    salvarDB(ARQUIVOS_DB.conversas, conversas);
+  }
+
+  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
+  const usuarios  = carregarDB(ARQUIVOS_DB.usuarios);
+  const conversaAtualizada = montarConversaDetalhada(conversas[indice], mensagens, usuarios);
+  io.emit("conversa_atualizada", conversaAtualizada);
+  res.json(conversaAtualizada);
 });
 
 // =============================================================================
 // ROTAS DE CLIENTES
 // =============================================================================
 app.get("/api/clientes", autenticar, (req, res) => {
-  const clientes = carregarDB(ARQUIVOS_DB.clientes);
-  res.json(clientes);
+  res.json(carregarDB(ARQUIVOS_DB.clientes));
 });
 
-
-// Listar atendentes ativos para transferência
+// =============================================================================
+// ROTAS DE USUÁRIOS
+// =============================================================================
 app.get("/api/usuarios/atendentes", autenticar, (req, res) => {
   const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-
-  const atendentes = usuarios
-    .filter((u) => u.ativo !== false)
-    .map(({ senha, ...usuario }) => usuario);
-
-  res.json(atendentes);
+  res.json(usuarios.filter((u) => u.ativo !== false).map(({ senha, ...u }) => u));
 });
 
-// =============================================================================
-// ROTAS DE ADMINISTRAÇÃO
-// =============================================================================
 app.get("/api/usuarios", autenticar, (req, res) => {
-  if (req.usuario.role !== "admin") {
-    return res.status(403).json({ erro: "Sem permissão" });
-  }
-
+  if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Sem permissão" });
   const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-
-  const usuariosSemSenha = usuarios
-    .filter((u) => u.ativo !== false)
-    .map(({ senha, ...usuario }) => usuario);
-
-  res.json(usuariosSemSenha);
+  res.json(usuarios.filter((u) => u.ativo !== false).map(({ senha, ...u }) => u));
 });
 
 app.delete("/api/usuarios/:id", autenticar, (req, res) => {
-  if (req.usuario.role !== "admin") {
-    return res.status(403).json({ erro: "Sem permissão" });
-  }
-
-  const usuarioId = req.params.id;
-
-  if (usuarioId === req.usuario.id) {
-    return res.status(400).json({
-      erro: "Você não pode excluir seu próprio usuário logado.",
-    });
-  }
+  if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Sem permissão" });
+  if (req.params.id === req.usuario.id) return res.status(400).json({ erro: "Você não pode excluir seu próprio usuário." });
 
   const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-  const indice = usuarios.findIndex(
-    (u) => u.id === usuarioId && u.ativo !== false
-  );
-
-  if (indice === -1) {
-    return res.status(404).json({ erro: "Usuário não encontrado" });
-  }
+  const indice = usuarios.findIndex((u) => u.id === req.params.id && u.ativo !== false);
+  if (indice === -1) return res.status(404).json({ erro: "Usuário não encontrado" });
 
   const usuario = usuarios[indice];
-
   if (usuario.role === "admin") {
-    const adminsAtivos = usuarios.filter(
-      (u) => u.role === "admin" && u.ativo !== false
-    );
-
-    if (adminsAtivos.length <= 1) {
-      return res.status(400).json({
-        erro: "Não é possível excluir o último administrador.",
-      });
-    }
+    const adminsAtivos = usuarios.filter((u) => u.role === "admin" && u.ativo !== false);
+    if (adminsAtivos.length <= 1) return res.status(400).json({ erro: "Não é possível excluir o último administrador." });
   }
 
   usuarios[indice].ativo = false;
   usuarios[indice].excluidoEm = new Date().toISOString();
-
   salvarDB(ARQUIVOS_DB.usuarios, usuarios);
-
-  res.json({
-    ok: true,
-    mensagem: "Usuário excluído com sucesso.",
-  });
+  res.json({ ok: true, mensagem: "Usuário excluído com sucesso." });
 });
 
 // =============================================================================
-// WEBHOOK PARA RECEBER MENSAGENS DO WHATSAPP
+// WEBHOOK — RECEBER MENSAGENS DO WHATSAPP
 // =============================================================================
 app.post("/api/webhook/whatsapp", (req, res) => {
   const apiKey = req.headers["x-api-key"];
+  if (INTERNAL_API_KEY && apiKey !== INTERNAL_API_KEY) return res.status(401).json({ erro: "API key inválida" });
 
-  if (INTERNAL_API_KEY && apiKey !== INTERNAL_API_KEY) {
-    return res.status(401).json({ erro: "API key inválida" });
-  }
-
-  const {
-    telefone,
-    mensagem,
-    nomeCliente,
-    tipo,
-    arquivoUrl,
-    mimeType,
-    nomeArquivo,
-  } = req.body;
-
-  if (!telefone || (!mensagem && !arquivoUrl)) {
-    return res.status(400).json({ erro: "Dados incompletos" });
-  }
+  const { telefone, mensagem, nomeCliente, tipo, arquivoUrl, mimeType, nomeArquivo } = req.body;
+  if (!telefone || (!mensagem && !arquivoUrl)) return res.status(400).json({ erro: "Dados incompletos" });
 
   const telefoneNormalizado = normalizarTelefone(telefone);
-
   const conversas = carregarDB(ARQUIVOS_DB.conversas);
-  const clientes = carregarDB(ARQUIVOS_DB.clientes);
+  const clientes  = carregarDB(ARQUIVOS_DB.clientes);
   const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
 
   let cliente = clientes.find((c) => c.telefone === telefoneNormalizado);
-
   if (!cliente) {
-    cliente = {
-      id: gerarId(),
-      telefone: telefoneNormalizado,
-      nome: nomeCliente || "Cliente",
-      criadoEm: new Date().toISOString(),
-    };
-
+    cliente = { id: gerarId(), telefone: telefoneNormalizado, nome: nomeCliente || "Cliente", criadoEm: new Date().toISOString() };
     clientes.push(cliente);
     salvarDB(ARQUIVOS_DB.clientes, clientes);
   } else if (nomeCliente && cliente.nome !== nomeCliente) {
@@ -795,10 +605,7 @@ app.post("/api/webhook/whatsapp", (req, res) => {
     salvarDB(ARQUIVOS_DB.clientes, clientes);
   }
 
-  let conversa = conversas.find(
-    (c) => c.telefone === telefoneNormalizado && c.status !== "finalizada"
-  );
-
+  let conversa = conversas.find((c) => c.telefone === telefoneNormalizado && c.status !== "finalizada");
   let novaConversa = false;
 
   if (!conversa) {
@@ -809,10 +616,10 @@ app.post("/api/webhook/whatsapp", (req, res) => {
       clienteNome: cliente.nome,
       status: "aguardando",
       atendenteId: null,
+      etiquetas: [],
       criadoEm: new Date().toISOString(),
       atualizadoEm: new Date().toISOString(),
     };
-
     conversas.push(conversa);
     novaConversa = true;
   } else {
@@ -842,15 +649,8 @@ app.post("/api/webhook/whatsapp", (req, res) => {
   const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
   const conversaDetalhada = montarConversaDetalhada(conversa, mensagens, usuarios);
 
-  if (novaConversa) {
-    io.emit("nova_conversa", conversaDetalhada);
-  }
-
-  io.emit("nova_mensagem", {
-    conversaId: conversa.id,
-    mensagem: novaMensagem,
-  });
-
+  if (novaConversa) io.emit("nova_conversa", conversaDetalhada);
+  io.emit("nova_mensagem", { conversaId: conversa.id, mensagem: novaMensagem });
   io.emit("conversa_atualizada", conversaDetalhada);
 
   res.json({ ok: true, conversaId: conversa.id });
@@ -861,26 +661,16 @@ app.post("/api/webhook/whatsapp", (req, res) => {
 // =============================================================================
 io.on("connection", (socket) => {
   console.log("✅ Cliente conectado:", socket.id);
-
-  socket.on("entrar_conversa", (conversaId) => {
-    socket.join(`conversa_${conversaId}`);
-    console.log(`👤 Socket ${socket.id} entrou na conversa ${conversaId}`);
-  });
-
-  socket.on("sair_conversa", (conversaId) => {
-    socket.leave(`conversa_${conversaId}`);
-    console.log(`👋 Socket ${socket.id} saiu da conversa ${conversaId}`);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("❌ Cliente desconectado:", socket.id);
-  });
+  socket.on("entrar_conversa",  (id) => socket.join(`conversa_${id}`));
+  socket.on("sair_conversa",    (id) => socket.leave(`conversa_${id}`));
+  socket.on("disconnect", () => console.log("❌ Cliente desconectado:", socket.id));
 });
 
 // =============================================================================
 // INICIALIZAÇÃO
 // =============================================================================
 criarAdminSeNaoExistir();
+criarEtiquetasPadraoSeNaoExistir();
 
 server.listen(PORT, () => {
   console.log(`🚀 Servidor de chat rodando na porta ${PORT}`);
