@@ -43,16 +43,7 @@ const templatesRapidos = document.getElementById("templatesRapidos");
 
 let arquivoSelecionado = null;
 
-const TEMPLATES_RAPIDOS = [
-  { atalho: "/ola",       titulo: "Saudação",           texto: "Olá, tudo bem? Sou da equipe AVSEG. Como posso te ajudar?" },
-  { atalho: "/cpf",       titulo: "Pedir CPF ou placa", texto: "Me informe CPF ou placa do veículo, por favor." },
-  { atalho: "/verificar", titulo: "Verificando",         texto: "Vou verificar para você." },
-  { atalho: "/finalizar", titulo: "Finalizar atendimento", texto: "Seu atendimento foi finalizado. A AVSEG agradece!" },
-  { atalho: "/atraso",    titulo: "Pagamento em atraso", texto: "Olá, boa tarde! Devido ao atraso, será necessário realizar o pagamento em atraso." },
-  { atalho: "/pix",       titulo: "Pagamento via PIX",   texto: "Para pagar com PIX, é necessário selecionar e copiar a chave informada no boleto." },
-  { atalho: "/detalhes",  titulo: "Pedir detalhes",      texto: "Gostaríamos de entender melhor sua solicitação. Poderia nos passar mais detalhes?" },
-  { atalho: "/setor",     titulo: "Encaminhar setor",    texto: "Encaminhei sua solicitação para o setor responsável. Peço que aguarde um momento." },
-];
+let TEMPLATES_RAPIDOS = []; // carregado da API
 
 // =============================================================================
 // UTILITÁRIOS
@@ -196,6 +187,15 @@ function renderizarEtiquetaTag(etiqueta, modo = "lista") {
 // =============================================================================
 // ETIQUETAS — CARREGAR
 // =============================================================================
+
+
+async function carregarTemplates() {
+  try {
+    const resposta = await fetch(`${API_URL}/api/templates`, { headers: authHeaders() });
+    if (!resposta.ok) return;
+    TEMPLATES_RAPIDOS = await resposta.json();
+  } catch (_) {}
+}
 
 async function carregarEtiquetas() {
   try {
@@ -360,6 +360,7 @@ async function carregarEtiquetasAdmin() {
   if (!lista) return;
   lista.innerHTML = `<div class="loading">Carregando etiquetas...</div>`;
 
+  await carregarTemplates();
   await carregarEtiquetas();
 
   if (!todasEtiquetas.length) {
@@ -795,8 +796,8 @@ function esconderTemplatesRapidos() {
   if (templatesRapidos) templatesRapidos.style.display = "none";
 }
 
-function inserirTemplate(atalho) {
-  const t = TEMPLATES_RAPIDOS.find((x) => x.atalho === atalho);
+function inserirTemplate(idOuAtalho) {
+  const t = TEMPLATES_RAPIDOS.find((x) => x.id === idOuAtalho || x.atalho === idOuAtalho);
   if (!t) return;
   const val = chatInput.value.trim();
   chatInput.value = val.startsWith("/") ? t.texto : val ? `${val}\n${t.texto}` : t.texto;

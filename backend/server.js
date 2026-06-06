@@ -458,6 +458,101 @@ app.patch("/api/conversas/:id/mensagens/marcar-lidas", autenticar, (req, res) =>
   res.json({ mensagensAtualizadas: atualizadas });
 });
 
+
+// =============================================================================
+// ROTAS DE TEMPLATES RÁPIDOS
+// =============================================================================
+const ARQUIVO_TEMPLATES = path.join(DB_PATH, 'templates.json');
+
+const TEMPLATES_PADRAO = [
+  { id: '1', ordem: 1, atalho: '/ola',       titulo: 'Saudação',             texto: 'Olá, tudo bem? Sou da equipe AVSEG. Como posso te ajudar?' },
+  { id: '2', ordem: 2, atalho: '/cpf',       titulo: 'Pedir CPF ou placa',   texto: 'Me informe CPF ou placa do veículo, por favor.' },
+  { id: '3', ordem: 3, atalho: '/verificar', titulo: 'Verificando',           texto: 'Vou verificar para você.' },
+  { id: '4', ordem: 4, atalho: '/finalizar', titulo: 'Finalizar atendimento', texto: 'Seu atendimento foi finalizado. A AVSEG agradece!' },
+  { id: '5', ordem: 5, atalho: '/atraso',    titulo: 'Pagamento em atraso',   texto: 'Olá, boa tarde! Devido ao atraso, será necessário realizar o pagamento em atraso.' },
+  { id: '6', ordem: 6, atalho: '/pix',       titulo: 'Pagamento via PIX',     texto: 'Para pagar com PIX, é necessário selecionar e copiar a chave informada no boleto.' },
+  { id: '7', ordem: 7, atalho: '/detalhes',  titulo: 'Pedir detalhes',        texto: 'Gostaríamos de entender melhor sua solicitação. Poderia nos passar mais detalhes?' },
+  { id: '8', ordem: 8, atalho: '/setor',     titulo: 'Encaminhar setor',      texto: 'Encaminhei sua solicitação para o setor responsável. Peço que aguarde um momento.' },
+];
+
+function criarTemplatesPadraoSeNaoExistir() {
+  if (fs.existsSync(ARQUIVO_TEMPLATES)) return;
+  salvarDB(ARQUIVO_TEMPLATES, TEMPLATES_PADRAO);
+  console.log('✅ Templates padrão criados.');
+}
+
+// Listar templates (público para atendentes)
+app.get('/api/templates', autenticar, (req, res) => {
+  const templates = carregarDB(ARQUIVO_TEMPLATES);
+  res.json(templates.sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999)));
+});
+
+// Criar template (somente admin)
+app.post('/api/templates', autenticar, (req, res) => {
+  if (req.usuario.role !== 'admin') return res.status(403).json({ erro: 'Sem permissão.' });
+  const { titulo, atalho, texto } = req.body;
+  if (!titulo?.trim() || !atalho?.trim() || !texto?.trim()) return res.status(400).json({ erro: 'Título, atalho e texto são obrigatórios.' });
+
+  const atalhoFinal = atalho.trim().startsWith('/') ? atalho.trim() : '/' + atalho.trim();
+  const templates = carregarDB(ARQUIVO_TEMPLATES);
+
+  if (templates.find((t) => t.atalho.toLowerCase() === atalhoFinal.toLowerCase())) {
+    return res.status(400).json({ erro: 'Já existe um template com este atalho.' });
+  }
+
+  const maxOrdem = templates.reduce((max, t) => Math.max(max, t.ordem ?? 0), 0);
+  const novo = { id: gerarId(), ordem: maxOrdem + 1, titulo: titulo.trim(), atalho: atalhoFinal, texto: texto.trim(), criadoEm: new Date().toISOString() };
+  templates.push(novo);
+  salvarDB(ARQUIVO_TEMPLATES, templates);
+  res.json(novo);
+});
+
+// Editar template (somente admin)
+app.patch('/api/templates/:id', autenticar, (req, res) => {
+  if (req.usuario.role !== 'admin') return res.status(403).json({ erro: 'Sem permissão.' });
+  const { titulo, atalho, texto } = req.body;
+  const templates = carregarDB(ARQUIVO_TEMPLATES);
+  const idx = templates.findIndex((t) => t.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ erro: 'Template não encontrado.' });
+
+  if (titulo) templates[idx].titulo = titulo.trim();
+  if (texto)  templates[idx].texto  = texto.trim();
+  if (atalho) {
+    const atalhoFinal = atalho.trim().startsWith('/') ? atalho.trim() : '/' + atalho.trim();
+    const conflito = templates.find((t) => t.id !== req.params.id && t.atalho.toLowerCase() === atalhoFinal.toLowerCase());
+    if (conflito) return res.status(400).json({ erro: 'Atalho já usado por outro template.' });
+    templates[idx].atalho = atalhoFinal;
+  }
+  templates[idx].atualizadoEm = new Date().toISOString();
+  salvarDB(ARQUIVO_TEMPLATES, templates);
+  res.json(templates[idx]);
+});
+
+// Excluir template (somente admin)
+app.delete('/api/templates/:id', autenticar, (req, res) => {
+  if (req.usuario.role !== 'admin') return res.status(403).json({ erro: 'Sem permissão.' });
+  const templates = carregarDB(ARQUIVO_TEMPLATES);
+  const idx = templates.findIndex((t) => t.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ erro: 'Template não encontrado.' });
+  templates.splice(idx, 1);
+  salvarDB(ARQUIVO_TEMPLATES, templates);
+  res.json({ ok: true });
+});
+
+// Reordenar templates (somente admin)
+app.patch('/api/templates/reordenar', autenticar, (req, res) => {
+  if (req.usuario.role !== 'admin') return res.status(403).json({ erro: 'Sem permissão.' });
+  const { ordem } = req.body; // array de ids na nova ordem
+  if (!Array.isArray(ordem)) return res.status(400).json({ erro: 'ordem deve ser um array de IDs.' });
+  const templates = carregarDB(ARQUIVO_TEMPLATES);
+  ordem.forEach((id, i) => {
+    const t = templates.find((x) => x.id === id);
+    if (t) t.ordem = i + 1;
+  });
+  salvarDB(ARQUIVO_TEMPLATES, templates);
+  res.json({ ok: true });
+});
+
 // =============================================================================
 // ROTAS DE ETIQUETAS
 // =============================================================================
@@ -693,6 +788,7 @@ io.on("connection", (socket) => {
 // =============================================================================
 criarAdminSeNaoExistir();
 criarEtiquetasPadraoSeNaoExistir();
+criarTemplatesPadraoSeNaoExistir();
 
 server.listen(PORT, () => {
   console.log(`🚀 Servidor de chat rodando na porta ${PORT}`);

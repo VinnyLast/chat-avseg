@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AVSEG Chat — Configurações</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ── VARIÁVEIS ── */
+    :root {
+      --yellow: #f5c400;
+      --yellow-dim: rgba(245,196,0,0.14);
+      --yellow-border: rgba(245,196,0,0.32);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.12);
+      --green: #22c55e;
+      --green-dim: rgba(34,197,94,0.12);
+      --bg: #080808;
+      --card: #111;
+      --card2: #181818;
+      --border: rgba(255,255,255,0.08);
+      --text: #f0f0f0;
+      --muted: #777;
+      --radius: 14px;
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 32px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-decoration: none;
+    }
+
+    .topbar-brand img {
+      width: 38px;
+      height: 38px;
+      object-fit: contain;
+    }
+
+    .topbar-brand span {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--yellow);
+      letter-spacing: -0.5px;
+    }
+
+    .topbar-nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .topbar-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.18s;
+    }
+
+    .topbar-link:hover {
+      background: var(--card2);
+      color: var(--text);
+      border-color: rgba(255,255,255,0.14);
+    }
+
+    .topbar-link.active {
+      background: var(--yellow-dim);
+      color: var(--yellow);
+      border-color: var(--yellow-border);
+    }
+
+    .topbar-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 14px;
+      border-radius: 10px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+    }
+
+    .topbar-user span {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .btn-sair {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .btn-sair:hover { color: var(--red); border-color: rgba(239,68,68,0.4); }
+
+    /* ── LAYOUT ── */
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    .page-header {
+      margin-bottom: 36px;
+    }
+
+    .page-header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -1px;
+      margin-bottom: 6px;
+    }
+
+    .page-header p {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    /* ── SEÇÃO ── */
+    .secao {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .secao-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .secao-header h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .secao-header p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .secao-body { padding: 24px; }
+
+    /* ── FORMULÁRIO NOVO TEMPLATE ── */
+    .form-novo {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 8px;
+    }
+
+    .form-grupo {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .form-grupo label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    .form-grupo input,
+    .form-grupo textarea {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 14px;
+      color: var(--text);
+      font-family: inherit;
+      transition: border-color 0.18s, box-shadow 0.18s;
+      resize: none;
+    }
+
+    .form-grupo input:focus,
+    .form-grupo textarea:focus {
+      outline: none;
+      border-color: var(--yellow);
+      box-shadow: 0 0 0 3px rgba(245,196,0,0.1);
+    }
+
+    .form-grupo textarea { min-height: 80px; line-height: 1.5; }
+
+    .form-grupo .atalho-prefixo {
+      position: relative;
+    }
+
+    .form-grupo .atalho-prefixo::before {
+      content: '/';
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--yellow);
+      font-family: 'DM Mono', monospace;
+      font-weight: 700;
+      font-size: 15px;
+      pointer-events: none;
+    }
+
+    .form-grupo .atalho-prefixo input {
+      padding-left: 28px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .form-full { grid-column: 1 / -1; }
+
+    .form-acoes {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .erro-inline {
+      font-size: 13px;
+      color: #ff8a8a;
+      display: none;
+    }
+
+    /* ── BOTÕES ── */
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 22px;
+      border-radius: 10px;
+      border: none;
+      background: var(--yellow);
+      color: #050505;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s;
+      white-space: nowrap;
+    }
+
+    .btn-primary:hover { background: #ffd84a; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { background: #333; color: #666; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .btn-ghost:hover { background: var(--card2); color: var(--text); }
+
+    .btn-danger {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(239,68,68,0.3);
+      background: var(--red-dim);
+      color: #ff8a8a;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .btn-danger:hover { background: var(--red); color: white; border-color: var(--red); }
+
+    .btn-edit {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card2);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .btn-edit:hover { border-color: var(--yellow-border); color: var(--yellow); background: var(--yellow-dim); }
+
+    /* ── LISTA DE TEMPLATES ── */
+    #listaTemplates {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .template-card {
+      display: grid;
+      grid-template-columns: 36px 1fr auto;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 18px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      transition: border-color 0.18s, background 0.18s;
+      cursor: grab;
+    }
+
+    .template-card:active { cursor: grabbing; }
+
+    .template-card.dragging {
+      opacity: 0.45;
+      border-color: var(--yellow-border);
+      background: var(--yellow-dim);
+    }
+
+    .template-card.drag-over {
+      border-color: var(--yellow);
+      background: rgba(245,196,0,0.06);
+    }
+
+    .template-card:hover { border-color: rgba(255,255,255,0.14); }
+
+    .drag-handle {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.3;
+      cursor: grab;
+      padding: 4px;
+    }
+
+    .drag-handle span {
+      width: 18px;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+    }
+
+    .template-card:hover .drag-handle { opacity: 0.7; }
+
+    .template-info { min-width: 0; }
+
+    .template-titulo {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .template-atalho {
+      display: inline-block;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--yellow);
+      background: var(--yellow-dim);
+      border: 1px solid var(--yellow-border);
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+    }
+
+    .template-texto {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 520px;
+    }
+
+    .template-acoes {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* ── MODAL DE EDIÇÃO ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(4px);
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 560px;
+      background: var(--card);
+      border: 1px solid var(--yellow-border);
+      border-radius: 18px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+      padding: 28px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .modal-header h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--yellow);
+    }
+
+    .btn-fechar-modal {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--card2);
+      color: var(--muted);
+      font-size: 22px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.18s;
+    }
+
+    .btn-fechar-modal:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 22px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 9999;
+    }
+
+    #toast.visivel { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.sucesso { border-color: rgba(34,197,94,0.4); color: #4ade80; background: rgba(34,197,94,0.1); }
+    #toast.erro    { border-color: rgba(239,68,68,0.4); color: #ff8a8a; background: rgba(239,68,68,0.1); }
+    #toast.aviso   { border-color: var(--yellow-border); color: var(--yellow); background: var(--yellow-dim); }
+
+    /* ── LOADING ── */
+    .loading-state {
+      padding: 40px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    /* ── ACESSO NEGADO ── */
+    .acesso-negado {
+      padding: 60px 40px;
+      text-align: center;
+    }
+
+    .acesso-negado svg { color: var(--red); opacity: 0.5; margin-bottom: 16px; }
+    .acesso-negado h3 { font-family: 'Syne', sans-serif; font-size: 22px; margin-bottom: 8px; }
+    .acesso-negado p { color: var(--muted); }
+
+    /* ── RESPONSIVO ── */
+    @media (max-width: 640px) {
+      .topbar { padding: 14px 16px; }
+      .page { padding: 24px 14px 60px; }
+      .form-novo { grid-template-columns: 1fr; }
+      .secao-body { padding: 16px; }
+      .template-card { grid-template-columns: 28px 1fr; }
+      .template-acoes { grid-column: 1 / -1; justify-content: flex-end; }
+      .topbar-nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <a href="dashboard.html" class="topbar-brand">
+      <img src="assets/logo-avseg.png" alt="AVSEG">
+      <span>AVSEG Chat</span>
+    </a>
+
+    <nav class="topbar-nav">
+      <a href="dashboard.html" class="topbar-link">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        Atendimento
+      </a>
+      <a href="configuracoes.html" class="topbar-link active">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Configurações
+      </a>
+    </nav>
+
+    <div class="topbar-user">
+      <span id="nomeUsuario">Carregando...</span>
+      <button class="btn-sair" id="btnSair">Sair</button>
+    </div>
+  </header>
+
+  <!-- PÁGINA -->
+  <main class="page">
+    <div class="page-header">
+      <h1>Configurações</h1>
+      <p>Gerencie as mensagens automáticas disponíveis para os atendentes</p>
+    </div>
+
+    <!-- SEÇÃO: NOVO TEMPLATE -->
+    <div class="secao" id="secaoNovo">
+      <div class="secao-header">
+        <div>
+          <h2>Novo template</h2>
+          <p>Adicione uma resposta rápida com atalho de teclado</p>
+        </div>
+      </div>
+      <div class="secao-body">
+        <form id="formNovo">
+          <div class="form-novo">
+            <div class="form-grupo">
+              <label>Título</label>
+              <input type="text" id="novoTitulo" placeholder="Ex: Saudação" required maxlength="50">
+            </div>
+            <div class="form-grupo">
+              <label>Atalho</label>
+              <div class="atalho-prefixo">
+                <input type="text" id="novoAtalho" placeholder="ola" required maxlength="20"
+                       pattern="[a-zA-Z0-9_-]+" title="Apenas letras, números, - e _">
+              </div>
+            </div>
+            <div class="form-grupo form-full">
+              <label>Texto da mensagem</label>
+              <textarea id="novoTexto" placeholder="Digite a mensagem que será inserida ao usar este atalho..." required maxlength="500"></textarea>
+            </div>
+            <div class="form-acoes">
+              <span class="erro-inline" id="erroNovo"></span>
+              <button type="submit" class="btn-primary" id="btnCriar">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Criar template
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- SEÇÃO: LISTA -->
+    <div class="secao">
+      <div class="secao-header">
+        <div>
+          <h2>Templates criados</h2>
+          <p>Arraste para reordenar • clique em Editar para alterar</p>
+        </div>
+        <span id="totalTemplates" style="font-size:13px;color:var(--muted);font-weight:600;"></span>
+      </div>
+      <div class="secao-body">
+        <div id="listaTemplates">
+          <div class="loading-state">Carregando templates...</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL EDIÇÃO -->
+  <div class="modal-overlay" id="modalEditar" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Editar template</h3>
+        <button class="btn-fechar-modal" id="btnFecharModal">×</button>
+      </div>
+      <form id="formEditar">
+        <div class="form-novo">
+          <div class="form-grupo">
+            <label>Título</label>
+            <input type="text" id="editTitulo" required maxlength="50">
+          </div>
+          <div class="form-grupo">
+            <label>Atalho</label>
+            <div class="atalho-prefixo">
+              <input type="text" id="editAtalho" required maxlength="20">
+            </div>
+          </div>
+          <div class="form-grupo form-full">
+            <label>Texto da mensagem</label>
+            <textarea id="editTexto" required maxlength="500"></textarea>
+          </div>
+          <div class="form-acoes">
+            <span class="erro-inline" id="erroEditar"></span>
+            <div style="display:flex;gap:10px;">
+              <button type="button" class="btn-ghost" id="btnCancelarEditar">Cancelar</button>
+              <button type="submit" class="btn-primary">Salvar alterações</button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast"></div>
+
+  <script>
+    const API_URL = window.location.origin;
+    let token = localStorage.getItem("avseg_token");
+    let usuario = JSON.parse(localStorage.getItem("avseg_usuario") || "null");
+    let templates = [];
+    let editandoId = null;
+    let dragSrcIdx = null;
+
+    // ── AUTH ──
+    function authH() {
+      return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+    }
+
+    function sair() {
+      localStorage.removeItem("avseg_token");
+      localStorage.removeItem("avseg_usuario");
+      window.location.href = "index.html";
+    }
+
+    async function verificarAuth() {
+      if (!token) { window.location.href = "index.html"; return; }
+      try {
+        const r = await fetch(`${API_URL}/api/auth/verificar`, { headers: authH() });
+        if (!r.ok) { sair(); return; }
+        const d = await r.json();
+        usuario = d.usuario;
+        localStorage.setItem("avseg_usuario", JSON.stringify(usuario));
+        document.getElementById("nomeUsuario").textContent = usuario.nome || usuario.email;
+
+        // Somente admin acessa
+        if (usuario.role !== "admin") {
+          document.getElementById("secaoNovo").style.display = "none";
+          document.getElementById("listaTemplates").innerHTML = `
+            <div class="acesso-negado">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+              </svg>
+              <h3>Acesso restrito</h3>
+              <p>Somente administradores podem gerenciar templates.</p>
+            </div>`;
+        }
+      } catch (_) { sair(); }
+    }
+
+    // ── TOAST ──
+    let _toastTimeout;
+    function toast(msg, tipo = "sucesso") {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = `visivel ${tipo}`;
+      clearTimeout(_toastTimeout);
+      _toastTimeout = setTimeout(() => el.className = "", 3000);
+    }
+
+    // ── ESCAPAR HTML ──
+    function esc(t) {
+      const d = document.createElement("div");
+      d.textContent = t || "";
+      return d.innerHTML;
+    }
+
+    // ── CARREGAR TEMPLATES ──
+    async function carregar() {
+      try {
+        const r = await fetch(`${API_URL}/api/templates`, { headers: authH() });
+        if (!r.ok) { document.getElementById("listaTemplates").innerHTML = `<div class="loading-state">Erro ao carregar.</div>`; return; }
+        templates = await r.json();
+        renderizar();
+      } catch (_) {
+        document.getElementById("listaTemplates").innerHTML = `<div class="loading-state">Erro de conexão.</div>`;
+      }
+    }
+
+    // ── RENDERIZAR LISTA ──
+    function renderizar() {
+      const lista = document.getElementById("listaTemplates");
+      const total = document.getElementById("totalTemplates");
+      total.textContent = `${templates.length} template${templates.length !== 1 ? "s" : ""}`;
+
+      if (!templates.length) {
+        lista.innerHTML = `<div class="loading-state">Nenhum template criado ainda.</div>`;
+        return;
+      }
+
+      lista.innerHTML = "";
+      templates.forEach((t, idx) => {
+        const card = document.createElement("div");
+        card.className = "template-card";
+        card.draggable = true;
+        card.dataset.id = t.id;
+        card.dataset.idx = idx;
+
+        card.innerHTML = `
+          <div class="drag-handle" title="Arrastar para reordenar">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="template-info">
+            <div class="template-titulo">${esc(t.titulo)}</div>
+            <span class="template-atalho">${esc(t.atalho)}</span>
+            <div class="template-texto">${esc(t.texto)}</div>
+          </div>
+          <div class="template-acoes">
+            <button class="btn-edit" data-id="${t.id}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Editar
+            </button>
+            <button class="btn-danger" data-id="${t.id}" data-titulo="${esc(t.titulo)}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6"/><path d="M14 11v6"/>
+              </svg>
+              Excluir
+            </button>
+          </div>
+        `;
+
+        // Drag & drop
+        card.addEventListener("dragstart", (e) => {
+          dragSrcIdx = idx;
+          card.classList.add("dragging");
+          e.dataTransfer.effectAllowed = "move";
+        });
+        card.addEventListener("dragend", () => card.classList.remove("dragging"));
+        card.addEventListener("dragover", (e) => { e.preventDefault(); card.classList.add("drag-over"); });
+        card.addEventListener("dragleave", () => card.classList.remove("drag-over"));
+        card.addEventListener("drop", async (e) => {
+          e.preventDefault();
+          card.classList.remove("drag-over");
+          if (dragSrcIdx === null || dragSrcIdx === idx) return;
+
+          // Reordena localmente
+          const [moved] = templates.splice(dragSrcIdx, 1);
+          templates.splice(idx, 0, moved);
+          dragSrcIdx = null;
+          renderizar();
+
+          // Salva nova ordem na API
+          try {
+            await fetch(`${API_URL}/api/templates/reordenar`, {
+              method: "PATCH",
+              headers: authH(),
+              body: JSON.stringify({ ordem: templates.map((x) => x.id) }),
+            });
+            toast("Ordem salva!", "sucesso");
+          } catch (_) { toast("Erro ao salvar ordem.", "erro"); }
+        });
+
+        lista.appendChild(card);
+      });
+    }
+
+    // ── CRIAR ──
+    document.getElementById("formNovo").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const erroEl = document.getElementById("erroNovo");
+      erroEl.style.display = "none";
+
+      const titulo = document.getElementById("novoTitulo").value.trim();
+      const atalho = document.getElementById("novoAtalho").value.trim();
+      const texto  = document.getElementById("novoTexto").value.trim();
+
+      const btnCriar = document.getElementById("btnCriar");
+      btnCriar.disabled = true;
+
+      try {
+        const r = await fetch(`${API_URL}/api/templates`, {
+          method: "POST",
+          headers: authH(),
+          body: JSON.stringify({ titulo, atalho, texto }),
+        });
+        const d = await r.json();
+        if (!r.ok) { erroEl.textContent = d.erro || "Erro ao criar."; erroEl.style.display = "inline"; return; }
+        document.getElementById("formNovo").reset();
+        await carregar();
+        toast("Template criado!", "sucesso");
+      } catch (_) {
+        erroEl.textContent = "Erro de conexão."; erroEl.style.display = "inline";
+      } finally { btnCriar.disabled = false; }
+    });
+
+    // ── EDITAR ──
+    function abrirEditar(id) {
+      const t = templates.find((x) => x.id === id);
+      if (!t) return;
+      editandoId = id;
+      document.getElementById("editTitulo").value = t.titulo;
+      document.getElementById("editAtalho").value = t.atalho.replace(/^\//, "");
+      document.getElementById("editTexto").value = t.texto;
+      document.getElementById("erroEditar").style.display = "none";
+      document.getElementById("modalEditar").style.display = "flex";
+      document.getElementById("editTitulo").focus();
+    }
+
+    function fecharEditar() {
+      document.getElementById("modalEditar").style.display = "none";
+      editandoId = null;
+    }
+
+    document.getElementById("formEditar").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!editandoId) return;
+      const erroEl = document.getElementById("erroEditar");
+      erroEl.style.display = "none";
+
+      const titulo = document.getElementById("editTitulo").value.trim();
+      const atalho = document.getElementById("editAtalho").value.trim();
+      const texto  = document.getElementById("editTexto").value.trim();
+
+      try {
+        const r = await fetch(`${API_URL}/api/templates/${editandoId}`, {
+          method: "PATCH",
+          headers: authH(),
+          body: JSON.stringify({ titulo, atalho, texto }),
+        });
+        const d = await r.json();
+        if (!r.ok) { erroEl.textContent = d.erro || "Erro ao salvar."; erroEl.style.display = "inline"; return; }
+        fecharEditar();
+        await carregar();
+        toast("Template atualizado!", "sucesso");
+      } catch (_) {
+        erroEl.textContent = "Erro de conexão."; erroEl.style.display = "inline";
+      }
+    });
+
+    // ── EXCLUIR ──
+    async function excluir(id, titulo) {
+      if (!confirm(`Excluir o template "${titulo}"?`)) return;
+      try {
+        const r = await fetch(`${API_URL}/api/templates/${id}`, { method: "DELETE", headers: authH() });
+        if (!r.ok) { toast("Erro ao excluir.", "erro"); return; }
+        await carregar();
+        toast("Template excluído.", "aviso");
+      } catch (_) { toast("Erro de conexão.", "erro"); }
+    }
+
+    // ── EVENTOS GLOBAIS ──
+    document.getElementById("btnSair").addEventListener("click", sair);
+    document.getElementById("btnFecharModal").addEventListener("click", fecharEditar);
+    document.getElementById("btnCancelarEditar").addEventListener("click", fecharEditar);
+
+    document.getElementById("modalEditar").addEventListener("click", (e) => {
+      if (e.target === document.getElementById("modalEditar")) fecharEditar();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") fecharEditar();
+    });
+
+    // Delegação de clique na lista
+    document.getElementById("listaTemplates").addEventListener("click", (e) => {
+      const btnEdit = e.target.closest(".btn-edit");
+      if (btnEdit) { abrirEditar(btnEdit.dataset.id); return; }
+
+      const btnDel = e.target.closest(".btn-danger");
+      if (btnDel) { excluir(btnDel.dataset.id, btnDel.dataset.titulo); return; }
+    });
+
+    // ── INICIAR ──
+    (async () => {
+      await verificarAuth();
+      if (usuario?.role === "admin") await carregar();
+    })();
+  </script>
+</body>
+</html>
