@@ -146,6 +146,7 @@ function montarConversaDetalhada(conversa, mensagens, usuarios) {
     mensagensNaoLidas: naoLidas,
     totalMensagens: mensagensConv.length,
     etiquetas: Array.isArray(conversa.etiquetas) ? conversa.etiquetas : [],
+    solicitouHumano: conversa.solicitouHumano === true,
   };
 }
 
@@ -370,6 +371,23 @@ app.patch("/api/conversas/:id/transferir", autenticar, (req, res) => {
   res.json(conversaAtualizada);
 });
 
+
+// Ativar/desativar flag de solicitação de humano
+app.patch('/api/conversas/:id/humano', autenticar, (req, res) => {
+  const { ativo } = req.body;
+  const conversas = carregarDB(ARQUIVOS_DB.conversas);
+  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
+  const usuarios  = carregarDB(ARQUIVOS_DB.usuarios);
+  const indice = conversas.findIndex((c) => c.id === req.params.id);
+  if (indice === -1) return res.status(404).json({ erro: 'Conversa não encontrada.' });
+  conversas[indice].solicitouHumano = ativo !== false ? true : false;
+  conversas[indice].atualizadoEm = new Date().toISOString();
+  salvarDB(ARQUIVOS_DB.conversas, conversas);
+  const conversaAtualizada = montarConversaDetalhada(conversas[indice], mensagens, usuarios);
+  io.emit('conversa_atualizada', conversaAtualizada);
+  res.json(conversaAtualizada);
+});
+
 // =============================================================================
 // ROTAS DE MENSAGENS
 // =============================================================================
@@ -587,7 +605,9 @@ app.post("/api/webhook/whatsapp", (req, res) => {
   const apiKey = req.headers["x-api-key"];
   if (INTERNAL_API_KEY && apiKey !== INTERNAL_API_KEY) return res.status(401).json({ erro: "API key inválida" });
 
-  const { telefone, mensagem, nomeCliente, tipo, arquivoUrl, mimeType, nomeArquivo } = req.body;
+  const { telefone, mensagem, nomeCliente, tipo, arquivoUrl, mimeType, nomeArquivo, solicitouHumano } = req.body;
+  const textoMsg = String(mensagem || '').trim().toLowerCase();
+  const pedidoHumano = solicitouHumano === true || textoMsg === '5';
   if (!telefone || (!mensagem && !arquivoUrl)) return res.status(400).json({ erro: "Dados incompletos" });
 
   const telefoneNormalizado = normalizarTelefone(telefone);
@@ -617,6 +637,7 @@ app.post("/api/webhook/whatsapp", (req, res) => {
       status: "aguardando",
       atendenteId: null,
       etiquetas: [],
+      solicitouHumano: pedidoHumano,
       criadoEm: new Date().toISOString(),
       atualizadoEm: new Date().toISOString(),
     };
@@ -625,6 +646,7 @@ app.post("/api/webhook/whatsapp", (req, res) => {
   } else {
     const indice = conversas.findIndex((c) => c.id === conversa.id);
     conversas[indice].atualizadoEm = new Date().toISOString();
+    if (pedidoHumano) conversas[indice].solicitouHumano = true;
     conversa = conversas[indice];
   }
 

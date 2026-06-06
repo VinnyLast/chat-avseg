@@ -10,6 +10,7 @@ let filtroEtiqueta = null; // ID da etiqueta filtrada ou null
 let buscaAtual = "";
 let _ultimaDataMensagem = null;
 let todasEtiquetas = []; // cache global de etiquetas
+let _somHumanoTocado = new Set(); // evita tocar som múltiplas vezes
 
 const socket = io(API_URL);
 
@@ -119,6 +120,40 @@ function svgIcon(nome, tamanho = 18) {
     tag:       `<svg viewBox="0 0 24 24" ${attrs}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>`,
   };
   return icons[nome] || icons.clip;
+}
+
+
+// =============================================================================
+// HUMANO PENDENTE — HELPERS
+// =============================================================================
+
+function estaHumanoPendente(conversa) {
+  // Ativa se: solicitouHumano=true OU (aguardando sem atendente)
+  if (conversa.solicitouHumano) return true;
+  if (conversa.status === 'aguardando' && !conversa.atendenteId) return true;
+  return false;
+}
+
+function tocarSomHumano(conversaId) {
+  if (_somHumanoTocado.has(conversaId)) return;
+  _somHumanoTocado.add(conversaId);
+  if (!window.AVSEGNotify) return;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ac = new AudioCtx();
+    [0, 0.15, 0.3].forEach((delay, i) => {
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime([660, 880, 1100][i], ac.currentTime + delay);
+      gain.gain.setValueAtTime(0, ac.currentTime + delay);
+      gain.gain.linearRampToValueAtTime(0.14, ac.currentTime + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + delay + 0.2);
+      osc.start(ac.currentTime + delay);
+      osc.stop(ac.currentTime + delay + 0.22);
+    });
+  } catch(_) {}
 }
 
 // =============================================================================
@@ -473,53 +508,100 @@ function iconeUltimaMensagem(conversa) {
   return "";
 }
 
+function _renderizarItemConversa(conversa) {
+  const item = document.createElement("div");
+  item.className = "conversa-item";
+  item.dataset.conversaId = conversa.id;
+  if (conversaAtual?.id === conversa.id) item.classList.add("active");
+
+  const humano = estaHumanoPendente(conversa);
+  if (humano) {
+    item.classList.add("humano-pendente");
+    tocarSomHumano(conversa.id);
+  }
+
+  const badge = conversa.mensagensNaoLidas > 0
+    ? `<span class="conversa-badge">${conversa.mensagensNaoLidas}</span>`
+    : `<span class="conversa-badge" style="display:none;">0</span>`;
+
+  const badgeHumano = humano
+    ? `<span class="badge-humano">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        Humano
+      </span>`
+    : "";
+
+  const idsEtiquetas = Array.isArray(conversa.etiquetas) ? conversa.etiquetas : [];
+  const etiquetasHTML = idsEtiquetas.length
+    ? `<div class="conversa-etiquetas">${idsEtiquetas.map((id) => {
+        const et = todasEtiquetas.find((e) => e.id === id);
+        return et ? renderizarEtiquetaTag(et, "lista") : "";
+      }).join("")}</div>`
+    : "";
+
+  item.innerHTML = `
+    <div class="conversa-avatar">
+      <span class="conversa-inicial">${primeiraLetra(conversa.clienteNome)}</span>
+    </div>
+    <div class="conversa-info">
+      <div class="conversa-header">
+        <h4 class="conversa-nome">${escaparHTML(conversa.clienteNome || "Cliente")}</h4>
+        <span class="conversa-hora">${formatarHora(conversa.ultimaMensagemData)}</span>
+      </div>
+      <div class="conversa-footer">
+        <p class="conversa-ultima-msg">${iconeUltimaMensagem(conversa)}<span>${escaparHTML(formatarUltimaMensagem(conversa))}</span></p>
+        ${badge}
+      </div>
+      ${conversa.atendenteNome ? `<small class="conversa-atendente">${svgIcon("usuario", 15)} <span>${escaparHTML(conversa.atendenteNome)}</span></small>` : ""}
+      <div class="conversa-etiquetas-row">
+        ${badgeHumano}
+        ${etiquetasHTML}
+      </div>
+    </div>
+    <div class="conversa-status ${conversa.status || "aguardando"}"></div>
+  `;
+  item.addEventListener("click", () => abrirConversa(conversa.id));
+  return item;
+}
+
 function renderizarConversas() {
-  const lista = filtrarConversas();
-  if (!lista.length) {
+  const { humanos, normais } = separarConversas();
+  const total = humanos.length + normais.length;
+
+  if (!total) {
     listaConversas.innerHTML = `<div class="loading">Nenhuma conversa encontrada.</div>`;
     return;
   }
+
   listaConversas.innerHTML = "";
-  lista.forEach((conversa) => {
-    const item = document.createElement("div");
-    item.className = "conversa-item";
-    item.dataset.conversaId = conversa.id;
-    if (conversaAtual?.id === conversa.id) item.classList.add("active");
 
-    const badge = conversa.mensagensNaoLidas > 0
-      ? `<span class="conversa-badge">${conversa.mensagensNaoLidas}</span>`
-      : `<span class="conversa-badge" style="display:none;">0</span>`;
-
-    // Etiquetas na lista
-    const idsEtiquetas = Array.isArray(conversa.etiquetas) ? conversa.etiquetas : [];
-    const etiquetasHTML = idsEtiquetas.length
-      ? `<div class="conversa-etiquetas">${idsEtiquetas.map((id) => {
-          const et = todasEtiquetas.find((e) => e.id === id);
-          return et ? renderizarEtiquetaTag(et, "lista") : "";
-        }).join("")}</div>`
-      : "";
-
-    item.innerHTML = `
-      <div class="conversa-avatar">
-        <span class="conversa-inicial">${primeiraLetra(conversa.clienteNome)}</span>
-      </div>
-      <div class="conversa-info">
-        <div class="conversa-header">
-          <h4 class="conversa-nome">${escaparHTML(conversa.clienteNome || "Cliente")}</h4>
-          <span class="conversa-hora">${formatarHora(conversa.ultimaMensagemData)}</span>
-        </div>
-        <div class="conversa-footer">
-          <p class="conversa-ultima-msg">${iconeUltimaMensagem(conversa)}<span>${escaparHTML(formatarUltimaMensagem(conversa))}</span></p>
-          ${badge}
-        </div>
-        ${conversa.atendenteNome ? `<small class="conversa-atendente">${svgIcon("usuario", 15)} <span>${escaparHTML(conversa.atendenteNome)}</span></small>` : ""}
-        ${etiquetasHTML}
-      </div>
-      <div class="conversa-status ${conversa.status || "aguardando"}"></div>
+  // Seção prioritária — atendimento humano
+  if (humanos.length) {
+    const secaoHumano = document.createElement("div");
+    secaoHumano.className = "conversas-secao-titulo urgente";
+    secaoHumano.innerHTML = `
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      Aguardando atendimento humano
+      <span class="conversas-secao-count">${humanos.length}</span>
     `;
-    item.addEventListener("click", () => abrirConversa(conversa.id));
-    listaConversas.appendChild(item);
-  });
+    listaConversas.appendChild(secaoHumano);
+    humanos.forEach((c) => listaConversas.appendChild(_renderizarItemConversa(c)));
+  }
+
+  // Seção normal
+  if (normais.length) {
+    if (humanos.length) {
+      const secaoNormal = document.createElement("div");
+      secaoNormal.className = "conversas-secao-titulo";
+      secaoNormal.innerHTML = `Demais conversas`;
+      listaConversas.appendChild(secaoNormal);
+    }
+    normais.forEach((c) => listaConversas.appendChild(_renderizarItemConversa(c)));
+  }
 }
 
 // =============================================================================
@@ -777,8 +859,22 @@ async function assumirConversa() {
     conversas = conversas.map((c) => c.id === atualizada.id ? { ...c, ...atualizada } : c);
     conversaAtual = { ...conversaAtual, ...atualizada };
     chatStatus.value = conversaAtual.status;
+
+    // Desativa flag de humano pendente
+    if (conversaAtual.solicitouHumano) {
+      try {
+        await fetch(`${API_URL}/api/conversas/${conversaAtual.id}/humano`, {
+          method: "PATCH", headers: authHeaders(), body: JSON.stringify({ ativo: false }),
+        });
+        conversaAtual.solicitouHumano = false;
+        conversas = conversas.map((c) => c.id === conversaAtual.id ? { ...c, solicitouHumano: false } : c);
+        _somHumanoTocado.delete(conversaAtual.id);
+      } catch (_) {}
+    }
+
     atualizarInfoAtendente(conversaAtual); atualizarBotoesConversa(conversaAtual);
     renderizarConversas(); atualizarEstatisticas();
+    if (window.AVSEGNotify) AVSEGNotify.toast("Conversa assumida!", "sucesso");
   } catch (_) { alert("Erro de conexão ao assumir conversa."); }
 }
 
@@ -786,6 +882,27 @@ function atualizarInfoAtendente(conversa) {
   if (!chatAtendenteInfo) return;
   if (conversa?.atendenteNome) { chatAtendenteInfo.textContent = `Atendente: ${conversa.atendenteNome}`; chatAtendenteInfo.classList.add("com-atendente"); }
   else { chatAtendenteInfo.textContent = "Sem atendente responsável"; chatAtendenteInfo.classList.remove("com-atendente"); }
+
+  // Banner de humano pendente
+  const bannerExistente = document.getElementById("chatHumanoBanner");
+  if (bannerExistente) bannerExistente.remove();
+
+  if (estaHumanoPendente(conversa) && conversa.status !== "finalizada") {
+    const banner = document.createElement("div");
+    banner.id = "chatHumanoBanner";
+    banner.className = "chat-humano-banner";
+    banner.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      Cliente aguardando atendimento humano — assuma a conversa para iniciar
+    `;
+    // Insere após o header do chat
+    const chatHeader = document.querySelector(".chat-header");
+    if (chatHeader?.nextSibling) {
+      chatHeader.parentNode.insertBefore(banner, chatHeader.nextSibling);
+    }
+  }
 }
 
 function atualizarBotoesConversa(conversa) {
