@@ -3095,3 +3095,392 @@ body.modal-aberto {
     align-items: center;
     gap: 6px;
 }
+/* =============================================================================
+   AVSEG CHAT — melhorias-ui.css
+   Adicione no final do seu style.css existente, OU importe separado no HTML.
+   Contém: bolhas refinadas, animações de entrada, indicador digitando,
+           toast, badge, e polimentos gerais de UI.
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   ANIMAÇÕES DE ENTRADA DAS MENSAGENS
+   ----------------------------------------------------------------------------- */
+@keyframes msgEntradaCliente {
+  from {
+    opacity: 0;
+    transform: translateX(-14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes msgEntradaAtendente {
+  from {
+    opacity: 0;
+    transform: translateX(14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes msgEntradaSistema {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mensagem.cliente {
+  animation: msgEntradaCliente 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.mensagem.atendente {
+  animation: msgEntradaAtendente 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.mensagem.sistema {
+  animation: msgEntradaSistema 0.2s ease both;
+}
+
+/* -----------------------------------------------------------------------------
+   BOLHAS DE MENSAGEM — refinamento
+   ----------------------------------------------------------------------------- */
+
+/* Cauda nas bolhas */
+.mensagem {
+  position: relative;
+}
+
+.mensagem.cliente .mensagem-conteudo {
+  border-radius: 4px 18px 18px 18px;
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.mensagem.atendente .mensagem-conteudo {
+  border-radius: 18px 4px 18px 18px;
+  background: linear-gradient(135deg, #f5c400, #ffd84a);
+  color: #050505;
+  border: none;
+  box-shadow: 0 2px 14px rgba(245, 196, 0, 0.25);
+}
+
+/* Hora inline — estilo WhatsApp */
+.mensagem-conteudo {
+  padding: 10px 14px 8px;
+  position: relative;
+}
+
+.mensagem-texto {
+  font-size: 14.5px;
+  line-height: 1.55;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* Hora fica no canto inferior direito */
+.mensagem-hora {
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
+  text-align: right;
+  opacity: 0.6;
+  user-select: none;
+  letter-spacing: 0.02em;
+}
+
+.mensagem.atendente .mensagem-hora {
+  color: rgba(5, 5, 5, 0.7);
+}
+
+.mensagem.cliente .mensagem-hora {
+  color: var(--text-secondary);
+}
+
+/* Avatar sutil na bolha do cliente */
+.mensagem.cliente::before {
+  content: attr(data-inicial);
+  position: absolute;
+  left: -32px;
+  bottom: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #050505;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+/* Agrupamento — remove borda do topo quando mensagens consecutivas */
+.mensagem + .mensagem.cliente .mensagem-conteudo,
+.mensagem + .mensagem.atendente .mensagem-conteudo {
+  margin-top: -2px;
+}
+
+/* Espaçamento entre grupos de origem diferente */
+.mensagem.cliente + .mensagem.atendente,
+.mensagem.atendente + .mensagem.cliente {
+  margin-top: 12px;
+}
+
+/* Hover leve na bolha */
+.mensagem-conteudo {
+  transition: box-shadow 0.15s ease;
+}
+
+.mensagem.cliente .mensagem-conteudo:hover {
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+}
+
+.mensagem.atendente .mensagem-conteudo:hover {
+  box-shadow: 0 4px 18px rgba(245, 196, 0, 0.35);
+}
+
+/* Max-width um pouco maior */
+.mensagem {
+  max-width: 72%;
+}
+
+/* -----------------------------------------------------------------------------
+   INDICADOR "DIGITANDO..."
+   ----------------------------------------------------------------------------- */
+@keyframes digitandoPonto {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+.mensagem-digitando {
+  animation: msgEntradaCliente 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.digitando-bolha {
+  padding: 12px 16px !important;
+  min-width: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.digitando-pontos {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.digitando-pontos span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  display: block;
+  animation: digitandoPonto 1.2s ease infinite;
+}
+
+.digitando-pontos span:nth-child(1) { animation-delay: 0s; }
+.digitando-pontos span:nth-child(2) { animation-delay: 0.18s; }
+.digitando-pontos span:nth-child(3) { animation-delay: 0.36s; }
+
+/* -----------------------------------------------------------------------------
+   TOAST — feedback visual rápido
+   ----------------------------------------------------------------------------- */
+#avseg-toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.avseg-toast {
+  background: #1e1e1e;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transform: translateY(12px) scale(0.95);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.avseg-toast--visivel {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.avseg-toast--sucesso {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+}
+
+.avseg-toast--erro {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.12);
+  color: #ff8a8a;
+}
+
+.avseg-toast--aviso {
+  border-color: var(--yellow-border);
+  background: var(--yellow-soft);
+  color: var(--primary);
+}
+
+/* -----------------------------------------------------------------------------
+   NOTIFICAÇÃO VISUAL NA LISTA — pulso no badge
+   ----------------------------------------------------------------------------- */
+@keyframes badgePulse {
+  0% { box-shadow: 0 0 0 0 rgba(245, 196, 0, 0.55); }
+  70% { box-shadow: 0 0 0 8px rgba(245, 196, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 196, 0, 0); }
+}
+
+.conversa-badge {
+  animation: badgePulse 2s ease infinite;
+}
+
+/* Status dot animado para "aguardando" */
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.8); }
+}
+
+.conversa-status.aguardando {
+  animation: statusPulse 2s ease infinite;
+}
+
+/* -----------------------------------------------------------------------------
+   POLIMENTOS GERAIS
+   ----------------------------------------------------------------------------- */
+
+/* Linha de data separadora entre mensagens de dias diferentes */
+.mensagem-data-separador {
+  align-self: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 4px 14px;
+  border-radius: 999px;
+  margin: 8px 0;
+  user-select: none;
+  letter-spacing: 0.04em;
+}
+
+/* Input focado — brilho mais suave */
+#chatInput:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(245, 196, 0, 0.1);
+  background: #111;
+}
+
+/* Botão enviar — micro-interação */
+.btn-enviar {
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-enviar:not(:disabled):hover {
+  transform: scale(1.08) rotate(6deg);
+  box-shadow: 0 4px 18px rgba(245, 196, 0, 0.35);
+}
+
+.btn-enviar:not(:disabled):active {
+  transform: scale(0.94);
+}
+
+/* Conversa item — entrada suave ao carregar */
+@keyframes conversaEntrada {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.conversa-item {
+  animation: conversaEntrada 0.18s ease both;
+}
+
+/* Scrolbar suave na área de mensagens */
+.chat-mensagens {
+  scroll-behavior: smooth;
+}
+
+/* Fundo das mensagens — padrão de pontilhado sutil */
+.chat-mensagens {
+  background-image:
+    radial-gradient(circle, rgba(245, 196, 0, 0.04) 1px, transparent 1px);
+  background-size: 28px 28px;
+  background-color: #090909;
+}
+
+/* Tooltip de hora ao passar o mouse (opcional via title) */
+.mensagem-conteudo:hover .mensagem-hora {
+  opacity: 1;
+}
+
+/* Status select — estilo mais limpo */
+.status-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23f5c400' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+
+/* Linha de boas-vindas no chat vazio */
+.chat-vazio-content p {
+  max-width: 260px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* -----------------------------------------------------------------------------
+   RESPONSIVO
+   ----------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  #avseg-toast-container {
+    bottom: 80px;
+    width: 90vw;
+    left: 5vw;
+    transform: none;
+  }
+
+  .avseg-toast {
+    width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .mensagem {
+    max-width: 85%;
+  }
+}
