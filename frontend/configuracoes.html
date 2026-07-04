@@ -6,6 +6,12 @@
   <title>AVSEG Chat — Configurações</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    (function () {
+      var tema = localStorage.getItem("avseg_tema") || "dark";
+      document.documentElement.setAttribute("data-theme", tema);
+    })();
+  </script>
   <style>
     /* ── VARIÁVEIS ── */
     :root {
@@ -25,6 +31,17 @@
       --radius: 14px;
     }
 
+    [data-theme="light"] {
+      --yellow-dim: rgba(212,169,0,0.10);
+      --yellow-border: rgba(212,169,0,0.35);
+      --bg: #f0f0f0;
+      --card: #ffffff;
+      --card2: #f4f4f4;
+      --border: rgba(0,0,0,0.1);
+      --text: #111111;
+      --muted: #666;
+    }
+
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
     body {
@@ -32,7 +49,27 @@
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
     }
+
+    *, *::before, *::after { transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+
+    .btn-tema {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .btn-tema:hover { color: var(--yellow); border-color: var(--yellow-border); background: var(--yellow-dim); }
 
     /* ── TOPBAR ── */
     .topbar {
@@ -531,6 +568,134 @@
     .acesso-negado h3 { font-family: 'Syne', sans-serif; font-size: 22px; margin-bottom: 8px; }
     .acesso-negado p { color: var(--muted); }
 
+    /* ── ABAS ── */
+    .abas-nav {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .aba-btn {
+      padding: 10px 18px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.18s;
+    }
+
+    .aba-btn:hover { color: var(--text); }
+
+    .aba-btn.active {
+      color: var(--yellow);
+      border-bottom-color: var(--yellow);
+    }
+
+    /* ── HISTÓRICO ── */
+    .input-busca-historico {
+      width: 100%;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 14px;
+      color: var(--text);
+      font-family: inherit;
+    }
+
+    .input-busca-historico:focus {
+      outline: none;
+      border-color: var(--yellow);
+      box-shadow: 0 0 0 3px rgba(245,196,0,0.1);
+    }
+
+    .historico-item {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.18s;
+    }
+
+    .historico-item:hover { border-color: var(--yellow-border); }
+
+    .historico-item-nome { font-size: 14px; font-weight: 700; color: var(--text); }
+    .historico-item-telefone { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .historico-item-data { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+    .modal-historico-card { max-width: 640px; }
+
+    .historico-modal-mensagens {
+      max-height: 50vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-right: 6px;
+    }
+
+    .historico-msg {
+      max-width: 80%;
+      padding: 9px 13px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.45;
+      background: var(--card2);
+      border: 1px solid var(--border);
+    }
+
+    .historico-msg.atendente { align-self: flex-end; background: var(--yellow-dim); border-color: var(--yellow-border); }
+    .historico-msg.nota { align-self: center; max-width: 90%; background: rgba(245,196,0,0.1); border-left: 3px solid var(--yellow); }
+    .historico-msg-hora { display:block; font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+    /* ── MÉTRICAS ── */
+    .metricas-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .metrica-card {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+
+    .metrica-card .valor { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--yellow); }
+    .metrica-card .rotulo { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    .metricas-grafico-wrap {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 24px;
+    }
+
+    .metricas-atendentes h4 { font-size: 14px; margin-bottom: 12px; color: var(--text); }
+
+    .tabela-atendentes { width: 100%; border-collapse: collapse; }
+    .tabela-atendentes td, .tabela-atendentes th {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      text-align: left;
+      color: var(--text);
+    }
+    .tabela-atendentes th { color: var(--muted); font-size: 11px; text-transform: uppercase; }
+
     /* ── RESPONSIVO ── */
     @media (max-width: 640px) {
       .topbar { padding: 14px 16px; }
@@ -568,6 +733,9 @@
     </nav>
 
     <div class="topbar-user">
+      <button class="btn-tema" id="btnAlternarTema" type="button" title="Alternar tema claro/escuro">
+        <span id="iconeTema">🌙</span>
+      </button>
       <span id="nomeUsuario">Carregando...</span>
       <button class="btn-sair" id="btnSair">Sair</button>
     </div>
@@ -577,8 +745,18 @@
   <main class="page">
     <div class="page-header">
       <h1>Configurações</h1>
-      <p>Gerencie as mensagens automáticas disponíveis para os atendentes</p>
+      <p>Gerencie as mensagens automáticas, o histórico e as métricas do atendimento</p>
     </div>
+
+    <!-- ABAS -->
+    <div class="abas-nav">
+      <button class="aba-btn active" data-aba="templates">Templates</button>
+      <button class="aba-btn" data-aba="historico">Histórico</button>
+      <button class="aba-btn" data-aba="metricas" id="abaMetricasBtn" style="display:none;">Métricas</button>
+    </div>
+
+    <!-- ABA: TEMPLATES -->
+    <div class="aba-conteudo" id="abaTemplates">
 
     <!-- SEÇÃO: NOVO TEMPLATE -->
     <div class="secao" id="secaoNovo">
@@ -635,7 +813,72 @@
         </div>
       </div>
     </div>
+
+    </div><!-- /abaTemplates -->
+
+    <!-- ABA: HISTÓRICO -->
+    <div class="aba-conteudo" id="abaHistorico" style="display:none;">
+      <div class="secao">
+        <div class="secao-header">
+          <div>
+            <h2>Histórico de conversas</h2>
+            <p>Conversas finalizadas com os associados</p>
+          </div>
+          <span id="totalHistorico" style="font-size:13px;color:var(--muted);font-weight:600;"></span>
+        </div>
+        <div class="secao-body">
+          <input type="text" id="buscaHistorico" class="input-busca-historico" placeholder="Buscar por nome, telefone ou data (dd/mm/aaaa)...">
+          <div id="listaHistorico" style="margin-top:16px;">
+            <div class="loading-state">Carregando histórico...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA: MÉTRICAS -->
+    <div class="aba-conteudo" id="abaMetricas" style="display:none;">
+      <div class="secao">
+        <div class="secao-header">
+          <div>
+            <h2>Métricas de atendimento</h2>
+            <p>Visão geral do desempenho da equipe</p>
+          </div>
+        </div>
+        <div class="secao-body">
+          <div class="metricas-cards" id="metricasCards">
+            <div class="loading-state">Carregando métricas...</div>
+          </div>
+          <div class="metricas-grafico-wrap">
+            <canvas id="graficoMetricas" height="110"></canvas>
+          </div>
+          <div class="metricas-atendentes">
+            <h4>Conversas por atendente</h4>
+            <table class="tabela-atendentes" id="tabelaAtendentes">
+              <tbody><tr><td class="loading-state">Carregando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
+
+  <!-- MODAL — HISTÓRICO DE CONVERSA -->
+  <div class="modal-overlay" id="modalHistoricoConversa" style="display:none;">
+    <div class="modal-card modal-historico-card">
+      <div class="modal-header">
+        <div>
+          <h3 id="historicoModalNome">Conversa</h3>
+          <p id="historicoModalTelefone"></p>
+        </div>
+        <button class="btn-fechar-modal" id="btnFecharHistoricoModal">×</button>
+      </div>
+      <div id="historicoModalMensagens" class="historico-modal-mensagens"></div>
+      <div class="form-acoes" style="margin-top:16px;">
+        <span></span>
+        <button type="button" class="btn-primary" id="btnExportarHistorico">Exportar como TXT</button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL EDIÇÃO -->
   <div class="modal-overlay" id="modalEditar" style="display:none;">
@@ -675,6 +918,7 @@
   <!-- TOAST -->
   <div id="toast"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     const API_URL = window.location.origin;
     let token = localStorage.getItem("avseg_token");
@@ -682,6 +926,19 @@
     let templates = [];
     let editandoId = null;
     let dragSrcIdx = null;
+
+    // ── TEMA CLARO/ESCURO ──
+    function aplicarTema(tema) {
+      document.documentElement.setAttribute("data-theme", tema);
+      localStorage.setItem("avseg_tema", tema);
+      const icone = document.getElementById("iconeTema");
+      if (icone) icone.textContent = tema === "light" ? "☀️" : "🌙";
+    }
+    document.getElementById("btnAlternarTema").addEventListener("click", () => {
+      const atual = document.documentElement.getAttribute("data-theme") || "dark";
+      aplicarTema(atual === "light" ? "dark" : "light");
+    });
+    aplicarTema(document.documentElement.getAttribute("data-theme") || "dark");
 
     // ── AUTH ──
     function authH() {
@@ -715,8 +972,190 @@
               <h3>Acesso restrito</h3>
               <p>Somente administradores podem gerenciar templates.</p>
             </div>`;
+        } else {
+          document.getElementById("abaMetricasBtn").style.display = "inline-flex";
         }
       } catch (_) { sair(); }
+    }
+
+    // ── ABAS ──
+    document.querySelectorAll(".aba-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".aba-btn").forEach((b) => b.classList.remove("active"));
+        document.querySelectorAll(".aba-conteudo").forEach((c) => { c.style.display = "none"; });
+        btn.classList.add("active");
+        const aba = btn.dataset.aba;
+        const mapa = { templates: "abaTemplates", historico: "abaHistorico", metricas: "abaMetricas" };
+        document.getElementById(mapa[aba]).style.display = "block";
+        if (aba === "historico") carregarHistorico();
+        if (aba === "metricas") carregarMetricas();
+      });
+    });
+
+    // ── HISTÓRICO ──
+    let conversasFinalizadas = [];
+    let conversaHistoricoAtual = null;
+
+    function formatarDataHora(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleDateString("pt-BR") + " " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    async function carregarHistorico() {
+      const lista = document.getElementById("listaHistorico");
+      lista.innerHTML = `<div class="loading-state">Carregando histórico...</div>`;
+      try {
+        const r = await fetch(`${API_URL}/api/conversas`, { headers: authH() });
+        const dados = await r.json();
+        if (!r.ok) { lista.innerHTML = `<div class="loading-state">Erro ao carregar.</div>`; return; }
+        conversasFinalizadas = dados
+          .filter((c) => c.status === "finalizada")
+          .sort((a, b) => new Date(b.finalizadaEm || b.atualizadoEm) - new Date(a.finalizadaEm || a.atualizadoEm));
+        renderizarHistorico();
+      } catch (_) {
+        lista.innerHTML = `<div class="loading-state">Erro de conexão.</div>`;
+      }
+    }
+
+    function renderizarHistorico() {
+      const lista = document.getElementById("listaHistorico");
+      const total = document.getElementById("totalHistorico");
+      const termo = (document.getElementById("buscaHistorico").value || "").trim().toLowerCase();
+
+      const filtradas = conversasFinalizadas.filter((c) => {
+        if (!termo) return true;
+        const dataStr = formatarDataHora(c.finalizadaEm || c.atualizadoEm).toLowerCase();
+        return String(c.clienteNome || "").toLowerCase().includes(termo)
+          || String(c.telefone || "").toLowerCase().includes(termo)
+          || dataStr.includes(termo);
+      });
+
+      total.textContent = `${filtradas.length} conversa${filtradas.length !== 1 ? "s" : ""}`;
+
+      if (!filtradas.length) { lista.innerHTML = `<div class="loading-state">Nenhuma conversa encontrada.</div>`; return; }
+
+      lista.innerHTML = "";
+      filtradas.forEach((c) => {
+        const div = document.createElement("div");
+        div.className = "historico-item";
+        div.innerHTML = `
+          <div>
+            <div class="historico-item-nome">${esc(c.clienteNome || "Associado")}</div>
+            <div class="historico-item-telefone">${esc(c.telefone || "")}</div>
+          </div>
+          <div class="historico-item-data">${formatarDataHora(c.finalizadaEm || c.atualizadoEm)}</div>
+          <div>›</div>
+        `;
+        div.addEventListener("click", () => abrirHistoricoConversa(c));
+        lista.appendChild(div);
+      });
+    }
+
+    document.getElementById("buscaHistorico").addEventListener("input", renderizarHistorico);
+
+    async function abrirHistoricoConversa(conversa) {
+      conversaHistoricoAtual = conversa;
+      document.getElementById("historicoModalNome").textContent = conversa.clienteNome || "Associado";
+      document.getElementById("historicoModalTelefone").textContent = conversa.telefone || "";
+      const container = document.getElementById("historicoModalMensagens");
+      container.innerHTML = `<div class="loading-state">Carregando mensagens...</div>`;
+      document.getElementById("modalHistoricoConversa").style.display = "flex";
+      try {
+        const r = await fetch(`${API_URL}/api/conversas/${conversa.id}/mensagens`, { headers: authH() });
+        const mensagens = await r.json();
+        if (!r.ok || !Array.isArray(mensagens)) { container.innerHTML = `<div class="loading-state">Erro ao carregar mensagens.</div>`; return; }
+        conversaHistoricoAtual.mensagens = mensagens;
+        container.innerHTML = mensagens.map((m) => {
+          const classe = m.tipo === "nota" ? "nota" : (m.origem === "atendente" ? "atendente" : "");
+          const label = m.tipo === "nota" ? "🔒 Nota interna<br>" : "";
+          const hora = m.criadoEm ? new Date(m.criadoEm).toLocaleString("pt-BR") : "";
+          return `<div class="historico-msg ${classe}">${label}${esc(m.texto || (m.arquivoUrl ? "[Arquivo]" : ""))}<span class="historico-msg-hora">${hora}</span></div>`;
+        }).join("") || `<div class="loading-state">Sem mensagens.</div>`;
+      } catch (_) {
+        container.innerHTML = `<div class="loading-state">Erro de conexão.</div>`;
+      }
+    }
+
+    function fecharHistoricoModal() {
+      document.getElementById("modalHistoricoConversa").style.display = "none";
+    }
+
+    document.getElementById("btnFecharHistoricoModal").addEventListener("click", fecharHistoricoModal);
+    document.getElementById("modalHistoricoConversa").addEventListener("click", (e) => {
+      if (e.target === document.getElementById("modalHistoricoConversa")) fecharHistoricoModal();
+    });
+
+    document.getElementById("btnExportarHistorico").addEventListener("click", () => {
+      if (!conversaHistoricoAtual) return;
+      const c = conversaHistoricoAtual;
+      const linhas = [
+        `Conversa com ${c.clienteNome || "Associado"} (${c.telefone || ""})`,
+        `Finalizada em: ${formatarDataHora(c.finalizadaEm || c.atualizadoEm)}`,
+        "",
+      ];
+      (c.mensagens || []).forEach((m) => {
+        const quem = m.tipo === "nota" ? "[NOTA INTERNA]" : (m.origem === "atendente" ? "Atendente" : m.origem === "sistema" ? "Sistema" : "Associado");
+        const hora = m.criadoEm ? new Date(m.criadoEm).toLocaleString("pt-BR") : "";
+        linhas.push(`[${hora}] ${quem}: ${m.texto || (m.arquivoUrl ? "[Arquivo enviado]" : "")}`);
+      });
+      const blob = new Blob([linhas.join("\n")], { type: "text/plain;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `conversa-${(c.clienteNome || "associado").replace(/\s+/g, "-")}-${c.id}.txt`;
+      document.body.appendChild(link); link.click(); link.remove();
+    });
+
+    // ── MÉTRICAS ──
+    let chartMetricas = null;
+
+    async function carregarMetricas() {
+      const cards = document.getElementById("metricasCards");
+      cards.innerHTML = `<div class="loading-state">Carregando métricas...</div>`;
+      try {
+        const r = await fetch(`${API_URL}/api/metricas`, { headers: authH() });
+        const d = await r.json();
+        if (!r.ok) { cards.innerHTML = `<div class="loading-state">${d.erro || "Erro ao carregar."}</div>`; return; }
+
+        cards.innerHTML = `
+          <div class="metrica-card"><div class="valor">${d.conversasHoje}</div><div class="rotulo">Conversas hoje</div></div>
+          <div class="metrica-card"><div class="valor">${d.conversasSemana}</div><div class="rotulo">Conversas na semana</div></div>
+          <div class="metrica-card"><div class="valor">${d.porStatus.aguardando}</div><div class="rotulo">Aguardando</div></div>
+          <div class="metrica-card"><div class="valor">${d.porStatus.em_atendimento}</div><div class="rotulo">Em atendimento</div></div>
+          <div class="metrica-card"><div class="valor">${d.porStatus.finalizada}</div><div class="rotulo">Finalizadas</div></div>
+        `;
+
+        const tbody = document.querySelector("#tabelaAtendentes tbody");
+        if (!d.porAtendente.length) {
+          tbody.innerHTML = `<tr><td class="loading-state">Nenhum atendimento registrado ainda.</td></tr>`;
+        } else {
+          tbody.innerHTML = `<tr><th>Atendente</th><th>Conversas</th></tr>` +
+            d.porAtendente.map((a) => `<tr><td>${esc(a.nome)}</td><td>${a.total}</td></tr>`).join("");
+        }
+
+        const ctx = document.getElementById("graficoMetricas");
+        if (chartMetricas) chartMetricas.destroy();
+        chartMetricas = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: ["Aguardando", "Em atendimento", "Finalizadas"],
+            datasets: [{
+              label: "Conversas por status",
+              data: [d.porStatus.aguardando, d.porStatus.em_atendimento, d.porStatus.finalizada],
+              backgroundColor: ["#f5c400", "#3b82f6", "#22c55e"],
+              borderRadius: 6,
+            }],
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0, color: "#999" } }, x: { ticks: { color: "#999" } } },
+          },
+        });
+      } catch (_) {
+        cards.innerHTML = `<div class="loading-state">Erro de conexão.</div>`;
+      }
     }
 
     // ── TOAST ──
@@ -923,7 +1362,7 @@
     });
 
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") fecharEditar();
+      if (e.key === "Escape") { fecharEditar(); fecharHistoricoModal(); }
     });
 
     // Delegação de clique na lista

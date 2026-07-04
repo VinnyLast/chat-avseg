@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AVSEG Chat - Dashboard</title>
+  <script>
+    (function () {
+      var tema = localStorage.getItem("avseg_tema") || "dark";
+      document.documentElement.setAttribute("data-theme", tema);
+    })();
+  </script>
   <link rel="stylesheet" href="css/humano-destaque.css">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/etiquetas.css">
@@ -27,6 +33,11 @@
         </div>
       </div>
 
+      <button id="btnAlternarTema" class="btn-tema-toggle" type="button" title="Alternar tema claro/escuro">
+        <span id="iconeTema">🌙</span>
+        <span id="labelTema">Tema escuro</span>
+      </button>
+
       <div class="sidebar-stats">
         <div class="stat-card">
           <span class="stat-number" id="totalConversas">0</span>
@@ -37,6 +48,8 @@
           <span class="stat-label">Aguardando</span>
         </div>
       </div>
+
+      <div id="indicadorHorario" class="indicador-horario"></div>
 
       <div class="sidebar-filters">
         <button class="filter-btn active" data-status="todas">Todas</button>
@@ -85,7 +98,7 @@
             </svg>
           </button>
         </div>
-        <input type="text" id="searchConversas" placeholder="Buscar por nome ou telefone..." class="search-input">
+        <input type="text" id="searchConversas" placeholder="Buscar por nome ou telefone..." class="search-input" title="Buscar (Ctrl+K)">
       </div>
 
       <div class="mobile-filters">
@@ -151,11 +164,14 @@
             <button id="btnFinalizarConversa" class="btn-chat-action btn-finalizar" type="button">Finalizar</button>
             <button id="btnTransferirConversa" class="btn-chat-action btn-transferir" type="button">Transferir</button>
             <button id="btnReabrirConversa" class="btn-chat-action btn-reabrir" type="button" style="display:none;">Reabrir</button>
+            <button id="btnToggleInfoCliente" class="btn-secondary-small" type="button" title="Informações do associado">ℹ️ Info</button>
           </div>
         </div>
 
         <!-- Mensagens -->
-        <div id="chatMensagens" class="chat-mensagens"></div>
+        <div id="chatMensagens" class="chat-mensagens">
+          <button id="btnCarregarAnteriores" class="btn-carregar-anteriores" type="button" style="display:none;">Carregar mensagens anteriores</button>
+        </div>
 
         <!-- Preview de anexo -->
         <div id="anexoPreview" class="anexo-preview" style="display:none;"></div>
@@ -179,16 +195,32 @@
             </svg>
           </button>
 
-          <textarea id="chatInput" placeholder="Digite sua mensagem... ou / para respostas rápidas" rows="1"></textarea>
+          <button id="btnNotaInterna" class="btn-input-action" type="button" title="Nota interna (Ctrl+Alt+N)" aria-label="Nota interna">
+            📝
+          </button>
 
-          <button id="btnEnviar" class="btn-enviar" type="button" aria-label="Enviar mensagem">
+          <textarea id="chatInput" placeholder="Digite sua mensagem... ou / para respostas rápidas" rows="1" maxlength="1000"></textarea>
+
+          <button id="btnEnviar" class="btn-enviar" type="button" aria-label="Enviar mensagem" title="Enviar (Enter ou Ctrl+Enter)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="22" y1="2" x2="11" y2="13"></line>
               <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             </svg>
           </button>
         </div>
+        <div id="contadorCaracteres" class="contador-caracteres" style="display:none;">0 / 1000</div>
       </div>
+
+      <!-- Painel lateral — informações do associado -->
+      <aside id="painelClienteInfo" class="painel-cliente-info">
+        <div class="painel-cliente-header">
+          <h4>Informações do associado</h4>
+          <button id="btnFecharInfoCliente" class="btn-icon" type="button">×</button>
+        </div>
+        <div id="painelClienteConteudo" class="painel-cliente-conteudo">
+          <div class="loading">Selecione uma conversa...</div>
+        </div>
+      </aside>
     </div>
   </div>
 

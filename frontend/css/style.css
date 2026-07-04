@@ -3484,3 +3484,307 @@ body.modal-aberto {
     max-width: 85%;
   }
 }
+/* =============================================================================
+   TEMA CLARO
+   ============================================================================= */
+[data-theme="light"] {
+  --primary: #d4a900;
+  --primary-hover: #f5c400;
+  --bg-dark: #f0f0f0;
+  --bg-light: #f8f8f8;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f2f2f2;
+  --border: #e0e0e0;
+  --text-primary: #111111;
+  --text-secondary: #555555;
+  --yellow-soft: rgba(212, 169, 0, 0.10);
+  --yellow-border: rgba(212, 169, 0, 0.35);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .sidebar {
+  background: #ffffff;
+  border-right-color: #e5e5e5;
+}
+
+[data-theme="light"] .conversas-list {
+  background: #f8f8f8;
+}
+
+[data-theme="light"] .chat-container,
+[data-theme="light"] .chat-mensagens {
+  background: #f8f8f8 !important;
+  background-image: none !important;
+}
+
+[data-theme="light"] .chat-vazio-content svg {
+  color: #999;
+}
+
+/* Sobrepõe cores fixas do redesign.css (feito para o tema escuro) */
+[data-theme="light"] .conversas-header,
+[data-theme="light"] .conversas-secao-titulo,
+[data-theme="light"] .chat-header,
+[data-theme="light"] .chat-input-container,
+[data-theme="light"] .templates-rapidos,
+[data-theme="light"] .anexo-preview {
+  background: #ffffff !important;
+  border-color: #e5e5e5 !important;
+}
+
+[data-theme="light"] .search-input,
+[data-theme="light"] .status-select,
+[data-theme="light"] .btn-secondary-small {
+  background: #f0f0f0 !important;
+  border-color: #ddd !important;
+  color: #333 !important;
+}
+
+[data-theme="light"] .search-input::placeholder {
+  color: #888 !important;
+}
+
+[data-theme="light"] .conversa-item:hover {
+  background: #f0f0f0 !important;
+}
+
+[data-theme="light"] .conversa-item.active {
+  background: rgba(212, 169, 0, 0.08) !important;
+}
+
+[data-theme="light"] .mensagem.cliente .mensagem-conteudo {
+  background: #eeeeee;
+  color: #111111;
+}
+
+[data-theme="light"] #chatInput {
+  background: #f0f0f0;
+  border-color: #ddd;
+}
+
+[data-theme="light"] .modal-card,
+[data-theme="light"] .modal-imagem-card {
+  background: #ffffff;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: #f0f0f0;
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #cccccc;
+}
+
+/* Transição suave ao alternar entre tema claro e escuro */
+*, *::before, *::after {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* -----------------------------------------------------------------------------
+   BOTÃO DE ALTERNAR TEMA (sidebar)
+   ----------------------------------------------------------------------------- */
+.btn-tema-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  margin-top: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.btn-tema-toggle:hover {
+  border-color: var(--yellow-border);
+  color: var(--primary);
+  background: var(--yellow-soft);
+}
+
+/* =============================================================================
+   NOTAS INTERNAS
+   ============================================================================= */
+#btnNotaInterna.ativo {
+  background: var(--primary);
+  color: #050505;
+  border-color: var(--primary);
+}
+
+.chat-input-container.modo-nota {
+  background: rgba(245, 196, 0, 0.06);
+}
+
+.chat-input-container.modo-nota #chatInput {
+  background: rgba(245, 196, 0, 0.12);
+  border-color: var(--yellow-border);
+}
+
+.mensagem.nota-interna {
+  align-self: center;
+  max-width: 80%;
+}
+
+.mensagem.nota-interna .mensagem-conteudo {
+  background: rgba(245, 196, 0, 0.12);
+  border-left: 3px solid var(--primary);
+  border-radius: 8px;
+  color: var(--text-primary);
+}
+
+.nota-interna-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+/* =============================================================================
+   CONTADOR DE CARACTERES
+   ============================================================================= */
+.contador-caracteres {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: right;
+  padding: 0 24px 6px;
+}
+
+.contador-caracteres.limite-alto {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+/* =============================================================================
+   CARREGAR MENSAGENS ANTERIORES
+   ============================================================================= */
+.btn-carregar-anteriores {
+  display: block;
+  margin: 0 auto 12px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.btn-carregar-anteriores:hover {
+  border-color: var(--yellow-border);
+  color: var(--primary);
+  background: var(--yellow-soft);
+}
+
+/* =============================================================================
+   INDICADOR DE HORÁRIO DE ATENDIMENTO
+   ============================================================================= */
+.indicador-horario {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  margin: 0 20px 10px;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* =============================================================================
+   PAINEL LATERAL — INFORMAÇÕES DO ASSOCIADO
+   ============================================================================= */
+.painel-cliente-info {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(300px, 90vw);
+  height: 100%;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.25);
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.painel-cliente-info.aberto {
+  transform: translateX(0);
+}
+
+.painel-cliente-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.painel-cliente-header h4 {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.painel-cliente-conteudo {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.painel-cliente-secao-titulo {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.painel-cliente-conversa-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-light);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: all 0.18s;
+}
+
+.painel-cliente-conversa-item:hover {
+  border-color: var(--yellow-border);
+  background: var(--yellow-soft);
+}
+
+.painel-cliente-conversa-item .conversa-item-data {
+  color: var(--text-secondary);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+@media (max-width: 900px) {
+  .painel-cliente-info { width: 100%; }
+}

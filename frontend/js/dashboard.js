@@ -40,10 +40,55 @@ const fileAnexo = document.getElementById("fileAnexo");
 const anexoPreview = document.getElementById("anexoPreview");
 const btnTemplates = document.getElementById("btnTemplates");
 const templatesRapidos = document.getElementById("templatesRapidos");
+const btnNotaInterna = document.getElementById("btnNotaInterna");
+const chatInputContainer = document.querySelector(".chat-input-container");
+const contadorCaracteres = document.getElementById("contadorCaracteres");
 
 let arquivoSelecionado = null;
+let modoNotaInterna = false;
 
 let TEMPLATES_RAPIDOS = []; // carregado da API
+
+// =============================================================================
+// TEMA CLARO / ESCURO
+// =============================================================================
+
+function aplicarTema(tema) {
+  document.documentElement.setAttribute("data-theme", tema);
+  localStorage.setItem("avseg_tema", tema);
+  const icone = document.getElementById("iconeTema");
+  const label = document.getElementById("labelTema");
+  if (icone) icone.textContent = tema === "light" ? "☀️" : "🌙";
+  if (label) label.textContent = tema === "light" ? "Tema claro" : "Tema escuro";
+}
+
+function alternarTema() {
+  const atual = document.documentElement.getAttribute("data-theme") || "dark";
+  aplicarTema(atual === "light" ? "dark" : "light");
+}
+
+// =============================================================================
+// INDICADOR DE HORÁRIO DE ATENDIMENTO (seg-sex 8h-18h, sáb 8h-12h, UTC-3)
+// =============================================================================
+
+function dentroDoHorarioAtendimento() {
+  const agora = new Date();
+  const utcMs = agora.getTime() + agora.getTimezoneOffset() * 60000;
+  const horaLocal = new Date(utcMs - 3 * 60 * 60 * 1000);
+  const dia = horaLocal.getDay();
+  const hora = horaLocal.getHours() + horaLocal.getMinutes() / 60;
+
+  if (dia === 0) return false;
+  if (dia === 6) return hora >= 8 && hora < 12;
+  return hora >= 8 && hora < 18;
+}
+
+function atualizarIndicadorHorario() {
+  const el = document.getElementById("indicadorHorario");
+  if (!el) return;
+  const dentro = dentroDoHorarioAtendimento();
+  el.textContent = dentro ? "🟢 Dentro do horário" : "🔴 Fora do horário";
+}
 
 // =============================================================================
 // UTILITÁRIOS
@@ -632,6 +677,9 @@ async function abrirConversa(conversaId) {
   conversaAtual = conversa;
   socket.emit("entrar_conversa", conversaAtual.id);
 
+  if (modoNotaInterna) alternarModoNota();
+  fecharPainelClienteInfo();
+
   chatVazio.style.display = "none";
   chatAtivo.style.display = "flex";
 
@@ -653,18 +701,61 @@ async function abrirConversa(conversaId) {
 // MENSAGENS
 // =============================================================================
 
+let mensagensCarregadas = [];
+let _offsetMensagens = 0;
+
+function criarBotaoCarregarAnteriores(temMais) {
+  const btn = document.createElement("button");
+  btn.id = "btnCarregarAnteriores";
+  btn.className = "btn-carregar-anteriores";
+  btn.type = "button";
+  btn.textContent = "Carregar mensagens anteriores";
+  btn.style.display = temMais ? "block" : "none";
+  return btn;
+}
+
+function renderizarMensagensCarregadas(temMais) {
+  _ultimaDataMensagem = null;
+  chatMensagens.innerHTML = "";
+  chatMensagens.appendChild(criarBotaoCarregarAnteriores(temMais));
+  mensagensCarregadas.forEach((m) => adicionarMensagemNaTela(m));
+}
+
 async function carregarMensagens(conversaId) {
   try {
     chatMensagens.innerHTML = `<div class="loading">Carregando mensagens...</div>`;
-    const resposta = await fetch(`${API_URL}/api/conversas/${conversaId}/mensagens`, { headers: authHeaders() });
+    _offsetMensagens = 0;
+    mensagensCarregadas = [];
+    const resposta = await fetch(`${API_URL}/api/conversas/${conversaId}/mensagens?limite=50&offset=0`, { headers: authHeaders() });
     if (!resposta.ok) { chatMensagens.innerHTML = `<div class="loading">Erro ao carregar mensagens.</div>`; return; }
-    const mensagens = await resposta.json();
-    chatMensagens.innerHTML = "";
-    _ultimaDataMensagem = null;
-    mensagens.forEach((m) => adicionarMensagemNaTela(m));
+    const dados = await resposta.json();
+    mensagensCarregadas = dados.mensagens || [];
+    _offsetMensagens = mensagensCarregadas.length;
+    renderizarMensagensCarregadas(dados.temMais);
     rolarParaBaixo();
   } catch (_) {
     chatMensagens.innerHTML = `<div class="loading">Erro ao carregar mensagens.</div>`;
+  }
+}
+
+async function carregarMensagensAnteriores() {
+  if (!conversaAtual) return;
+  const btn = document.getElementById("btnCarregarAnteriores");
+  if (btn) { btn.disabled = true; btn.textContent = "Carregando..."; }
+  try {
+    const resposta = await fetch(`${API_URL}/api/conversas/${conversaAtual.id}/mensagens?limite=50&offset=${_offsetMensagens}`, { headers: authHeaders() });
+    if (!resposta.ok) return;
+    const dados = await resposta.json();
+    const antigas = dados.mensagens || [];
+    _offsetMensagens += antigas.length;
+    mensagensCarregadas = [...antigas, ...mensagensCarregadas];
+
+    const alturaAntes = chatMensagens.scrollHeight;
+    renderizarMensagensCarregadas(dados.temMais);
+    chatMensagens.scrollTop = chatMensagens.scrollHeight - alturaAntes;
+  } catch (_) {
+    const btnErro = document.getElementById("btnCarregarAnteriores");
+    if (btnErro) { btnErro.disabled = false; btnErro.textContent = "Carregar mensagens anteriores"; }
   }
 }
 
@@ -695,16 +786,21 @@ function adicionarMensagemNaTela(mensagem) {
     chatMensagens.appendChild(sep);
   }
 
-  const div = document.createElement("div");
-  div.className = `mensagem ${mensagem.origem === "atendente" ? "atendente" : mensagem.origem === "sistema" ? "sistema" : "cliente"}`;
-
   const tipo = mensagem.tipo || "texto";
+
+  const div = document.createElement("div");
+  div.className = tipo === "nota"
+    ? "mensagem nota-interna"
+    : `mensagem ${mensagem.origem === "atendente" ? "atendente" : mensagem.origem === "sistema" ? "sistema" : "cliente"}`;
+
   const arquivoUrl  = mensagem.arquivoUrl  || "";
   const nomeArquivo = mensagem.nomeArquivo || "Arquivo enviado";
   const mimeType    = mensagem.mimeType    || "";
   let conteudo = "";
 
-  if (tipo === "imagem" && arquivoUrl) {
+  if (tipo === "nota") {
+    conteudo = `<p class="nota-interna-label">🔒 Nota interna</p><p class="mensagem-texto">${escaparHTML(mensagem.texto || "")}</p>`;
+  } else if (tipo === "imagem" && arquivoUrl) {
     conteudo = `<div class="mensagem-midia"><img src="${arquivoUrl}" alt="Imagem enviada" class="mensagem-imagem" data-url="${arquivoUrl}"></div>${mensagem.texto ? `<p class="mensagem-texto legenda-midia">${escaparHTML(mensagem.texto)}</p>` : ""}`;
   } else if (tipo === "audio" && arquivoUrl) {
     conteudo = `<div class="mensagem-midia"><audio controls class="mensagem-audio"><source src="${arquivoUrl}" type="${mimeType || "audio/mpeg"}">Seu navegador não suporta áudio.</audio></div>${mensagem.texto ? `<p class="mensagem-texto legenda-midia">${escaparHTML(mensagem.texto)}</p>` : ""}`;
@@ -780,6 +876,104 @@ async function uploadArquivoSelecionado() {
 }
 
 // =============================================================================
+// PAINEL LATERAL — INFORMAÇÕES DO ASSOCIADO
+// =============================================================================
+
+function renderizarPainelClienteInfo(conversa) {
+  const container = document.getElementById("painelClienteConteudo");
+  if (!container || !conversa) return;
+
+  const outras = conversas
+    .filter((c) => conversa.clienteId && c.clienteId === conversa.clienteId && c.id !== conversa.id)
+    .sort((a, b) => new Date(b.atualizadoEm || b.criadoEm) - new Date(a.atualizadoEm || a.criadoEm));
+
+  const etiquetasHistorico = new Set();
+  [conversa, ...outras].forEach((c) => (Array.isArray(c.etiquetas) ? c.etiquetas : []).forEach((id) => etiquetasHistorico.add(id)));
+  const tagsHTML = [...etiquetasHistorico].map((id) => {
+    const et = todasEtiquetas.find((e) => e.id === id);
+    return et ? renderizarEtiquetaTag(et, "lista") : "";
+  }).join("");
+
+  const rotuloStatus = (c) => c.status === "finalizada" ? "Finalizada" : c.status === "aguardando" ? "Aguardando" : "Em atendimento";
+
+  const ultimasHTML = outras.slice(0, 3).map((c) => `
+    <button type="button" class="painel-cliente-conversa-item" data-conversa-id="${c.id}">
+      ${escaparHTML(formatarUltimaMensagem(c))}
+      <span class="conversa-item-data">${formatarHora(c.ultimaMensagemData)} • ${rotuloStatus(c)}</span>
+    </button>
+  `).join("");
+
+  container.innerHTML = `
+    <div>
+      <div class="painel-cliente-secao-titulo">Associado</div>
+      <p style="font-size:14px;font-weight:700;color:var(--text-primary);">${escaparHTML(conversa.clienteNome || "Associado")}</p>
+      <p style="font-size:12px;color:var(--text-secondary);margin-top:2px;">${formatarTelefone(conversa.telefone)}</p>
+    </div>
+    <div>
+      <div class="painel-cliente-secao-titulo">Total de conversas anteriores</div>
+      <p style="font-size:20px;font-weight:800;color:var(--primary);">${outras.length}</p>
+    </div>
+    <div>
+      <div class="painel-cliente-secao-titulo">Últimas conversas</div>
+      ${ultimasHTML || `<p style="font-size:12px;color:var(--text-secondary);">Nenhuma conversa anterior.</p>`}
+    </div>
+    <div>
+      <div class="painel-cliente-secao-titulo">Etiquetas do histórico</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">${tagsHTML || `<p style="font-size:12px;color:var(--text-secondary);">Nenhuma etiqueta aplicada.</p>`}</div>
+    </div>
+  `;
+}
+
+function abrirPainelClienteInfo() {
+  const painel = document.getElementById("painelClienteInfo");
+  if (!painel || !conversaAtual) return;
+  renderizarPainelClienteInfo(conversaAtual);
+  painel.classList.add("aberto");
+}
+
+function fecharPainelClienteInfo() {
+  document.getElementById("painelClienteInfo")?.classList.remove("aberto");
+}
+
+function togglePainelClienteInfo() {
+  const painel = document.getElementById("painelClienteInfo");
+  if (!painel) return;
+  painel.classList.contains("aberto") ? fecharPainelClienteInfo() : abrirPainelClienteInfo();
+}
+
+// =============================================================================
+// NOTAS INTERNAS
+// =============================================================================
+
+function alternarModoNota() {
+  modoNotaInterna = !modoNotaInterna;
+  btnNotaInterna?.classList.toggle("ativo", modoNotaInterna);
+  chatInputContainer?.classList.toggle("modo-nota", modoNotaInterna);
+  chatInput.placeholder = modoNotaInterna
+    ? "Adicionar nota interna..."
+    : "Digite sua mensagem... ou / para respostas rápidas";
+  chatInput.focus();
+}
+
+async function enviarNotaInterna(texto) {
+  if (!conversaAtual) return;
+  try {
+    const resposta = await fetch(`${API_URL}/api/conversas/${conversaAtual.id}/notas`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ texto }),
+    });
+    const dados = await resposta.json();
+    if (!resposta.ok) { alert(dados.erro || "Erro ao salvar nota."); return; }
+    chatInput.value = "";
+    ajustarAlturaTextarea();
+    atualizarContadorCaracteres();
+  } catch (_) {
+    alert("Erro de conexão ao salvar nota.");
+  }
+}
+
+// =============================================================================
 // TEMPLATES RÁPIDOS
 // =============================================================================
 
@@ -814,6 +1008,8 @@ async function enviarMensagem() {
   const texto = chatInput.value.trim();
   if ((!texto && !arquivoSelecionado) || !conversaAtual) return;
   if (conversaAtual.status === "finalizada") { alert("Conversa finalizada. Reabra antes de responder."); return; }
+
+  if (modoNotaInterna) { await enviarNotaInterna(texto); return; }
 
   btnEnviar.disabled = true; chatInput.disabled = true;
   if (btnAnexar) btnAnexar.disabled = true;
@@ -945,6 +1141,19 @@ async function reabrirConversa() {
 function ajustarAlturaTextarea() {
   chatInput.style.height = "auto";
   chatInput.style.height = `${Math.min(chatInput.scrollHeight, 120)}px`;
+}
+
+// =============================================================================
+// CONTADOR DE CARACTERES
+// =============================================================================
+
+function atualizarContadorCaracteres() {
+  if (!contadorCaracteres) return;
+  const total = chatInput.value.length;
+  if (total === 0) { contadorCaracteres.style.display = "none"; return; }
+  contadorCaracteres.style.display = "block";
+  contadorCaracteres.textContent = `${total} / 1000`;
+  contadorCaracteres.classList.toggle("limite-alto", total > 900);
 }
 
 // =============================================================================
@@ -1107,6 +1316,7 @@ function configurarSocket() {
     await carregarConversas();
     if (conversaAtual?.id === conversaId) {
       if (window.AVSEGNotify) AVSEGNotify.ocultarDigitando(conversaId);
+      mensagensCarregadas.push(mensagem);
       adicionarMensagemNaTela(mensagem); rolarParaBaixo();
       if (mensagem.origem === "cliente") {
         await marcarComoLidas(conversaId);
@@ -1127,12 +1337,15 @@ function configurarSocket() {
 // =============================================================================
 
 function configurarEventos() {
+  document.getElementById("btnAlternarTema")?.addEventListener("click", alternarTema);
+
   btnSair.addEventListener("click", sair);
   btnLogoutMobile?.addEventListener("click", sair);
   btnEnviar.addEventListener("click", enviarMensagem);
 
   chatInput.addEventListener("input", () => {
     ajustarAlturaTextarea();
+    atualizarContadorCaracteres();
     const val = chatInput.value.trim();
     if (val.startsWith("/")) renderizarTemplatesRapidos(val);
     else esconderTemplatesRapidos();
@@ -1140,6 +1353,18 @@ function configurarEventos() {
 
   btnAnexar?.addEventListener("click", () => fileAnexo?.click());
   fileAnexo?.addEventListener("change", selecionarArquivo);
+  btnNotaInterna?.addEventListener("click", alternarModoNota);
+
+  chatMensagens.addEventListener("click", (e) => {
+    if (e.target.closest("#btnCarregarAnteriores")) carregarMensagensAnteriores();
+  });
+
+  document.getElementById("btnToggleInfoCliente")?.addEventListener("click", togglePainelClienteInfo);
+  document.getElementById("btnFecharInfoCliente")?.addEventListener("click", fecharPainelClienteInfo);
+  document.getElementById("painelClienteConteudo")?.addEventListener("click", (e) => {
+    const item = e.target.closest(".painel-cliente-conversa-item");
+    if (item) { fecharPainelClienteInfo(); abrirConversa(item.dataset.conversaId); }
+  });
 
   // Usa mousedown para não conflitar com o click global que fecha o painel
   btnTemplates?.addEventListener("mousedown", (e) => {
@@ -1152,7 +1377,7 @@ function configurarEventos() {
   });
 
   chatInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); enviarMensagem(); }
+    if (e.key === "Enter" && (e.ctrlKey || !e.shiftKey)) { e.preventDefault(); enviarMensagem(); }
   });
 
   chatStatus.addEventListener("change", () => atualizarStatus(chatStatus.value));
@@ -1242,7 +1467,17 @@ function configurarEventos() {
   document.getElementById("modalEtiquetas")?.addEventListener("click", (e) => { if (e.target === document.getElementById("modalEtiquetas")) fecharModalEtiquetas(); });
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { fecharModalImagem(); fecharModalAtendentes(); fecharModalTransferir(); fecharModalEtiquetas(); fecharDropdownEtiquetas(); }
+    if (e.key === "Escape") { fecharModalImagem(); fecharModalAtendentes(); fecharModalTransferir(); fecharModalEtiquetas(); fecharDropdownEtiquetas(); fecharPainelClienteInfo(); }
+
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      searchConversas.focus();
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.altKey && e.key.toLowerCase() === "n" && conversaAtual) {
+      e.preventDefault();
+      alternarModoNota();
+    }
   });
 }
 
@@ -1250,11 +1485,24 @@ function configurarEventos() {
 // INICIALIZAÇÃO
 // =============================================================================
 
+function configurarAvisoSaida() {
+  window.addEventListener("beforeunload", (e) => {
+    const temConversaAtiva = conversas.some((c) => c.status === "em_atendimento" && c.atendenteId === usuario?.id);
+    if (!temConversaAtiva) return;
+    e.preventDefault();
+    e.returnValue = "";
+  });
+}
+
 async function iniciar() {
+  aplicarTema(document.documentElement.getAttribute("data-theme") || "dark");
   await verificarAutenticacao();
   await carregarEtiquetas();
   configurarEventos();
   configurarSocket();
+  configurarAvisoSaida();
+  atualizarIndicadorHorario();
+  setInterval(atualizarIndicadorHorario, 60000);
   await carregarConversas();
 }
 

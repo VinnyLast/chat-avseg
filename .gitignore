@@ -7,7 +7,7 @@ frontend/.env
 
 backend/database/
 backend/uploads/
-
+.claude/
 logs/
 *.log
 npm-debug.log*

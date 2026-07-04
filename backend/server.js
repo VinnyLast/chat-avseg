@@ -392,8 +392,51 @@ app.patch('/api/conversas/:id/humano', autenticar, (req, res) => {
 // ROTAS DE MENSAGENS
 // =============================================================================
 app.get("/api/conversas/:id/mensagens", autenticar, (req, res) => {
+  const mensagensConv = carregarDB(ARQUIVOS_DB.mensagens).filter((m) => m.conversaId === req.params.id);
+  const { limite, offset } = req.query;
+
+  if (!limite) return res.json(mensagensConv);
+
+  const lim = Math.max(1, parseInt(limite, 10) || 50);
+  const off = Math.max(0, parseInt(offset, 10) || 0);
+  const total = mensagensConv.length;
+  const fim = total - off;
+  const inicio = Math.max(0, fim - lim);
+
+  res.json({
+    mensagens: mensagensConv.slice(inicio, fim),
+    total,
+    temMais: inicio > 0,
+  });
+});
+
+// Adicionar nota interna (visível apenas para a equipe, não enviada ao WhatsApp)
+app.post("/api/conversas/:id/notas", autenticar, (req, res) => {
+  const { texto } = req.body;
+  if (!texto?.trim()) return res.status(400).json({ erro: "Texto da nota é obrigatório." });
+
+  const conversas = carregarDB(ARQUIVOS_DB.conversas);
+  const conversa = conversas.find((c) => c.id === req.params.id);
+  if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada." });
+
   const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  res.json(mensagens.filter((m) => m.conversaId === req.params.id));
+  const novaNota = {
+    id: gerarId(),
+    conversaId: conversa.id,
+    tipo: "nota",
+    texto: texto.trim(),
+    origem: "sistema",
+    usuarioId: req.usuario.id,
+    privado: true,
+    lida: true,
+    criadoEm: new Date().toISOString(),
+  };
+
+  mensagens.push(novaNota);
+  salvarDB(ARQUIVOS_DB.mensagens, mensagens);
+
+  io.emit("nova_mensagem", { conversaId: conversa.id, mensagem: novaNota });
+  res.json(novaNota);
 });
 
 app.post("/api/conversas/:id/mensagens", autenticar, async (req, res) => {
@@ -657,6 +700,38 @@ app.delete("/api/conversas/:id/etiquetas/:etiquetaId", autenticar, (req, res) =>
 // =============================================================================
 app.get("/api/clientes", autenticar, (req, res) => {
   res.json(carregarDB(ARQUIVOS_DB.clientes));
+});
+
+// =============================================================================
+// ROTAS DE MÉTRICAS (admin)
+// =============================================================================
+app.get("/api/metricas", autenticar, (req, res) => {
+  if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Sem permissão." });
+
+  const conversas = carregarDB(ARQUIVOS_DB.conversas);
+  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
+
+  const inicioHoje = new Date();
+  inicioHoje.setHours(0, 0, 0, 0);
+  const inicioSemana = new Date(inicioHoje);
+  inicioSemana.setDate(inicioSemana.getDate() - 7);
+
+  const conversasHoje = conversas.filter((c) => new Date(c.criadoEm) >= inicioHoje).length;
+  const conversasSemana = conversas.filter((c) => new Date(c.criadoEm) >= inicioSemana).length;
+
+  const porStatus = {
+    aguardando: conversas.filter((c) => c.status === "aguardando").length,
+    em_atendimento: conversas.filter((c) => c.status === "em_atendimento").length,
+    finalizada: conversas.filter((c) => c.status === "finalizada").length,
+  };
+
+  const porAtendente = usuarios
+    .filter((u) => u.ativo !== false)
+    .map((u) => ({ id: u.id, nome: u.nome, total: conversas.filter((c) => c.atendenteId === u.id).length }))
+    .filter((a) => a.total > 0)
+    .sort((a, b) => b.total - a.total);
+
+  res.json({ conversasHoje, conversasSemana, porStatus, porAtendente });
 });
 
 // =============================================================================

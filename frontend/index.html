@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AVSEG Chat - Login</title>
+  <script>
+    (function () {
+      var tema = localStorage.getItem("avseg_tema") || "dark";
+      document.documentElement.setAttribute("data-theme", tema);
+    })();
+  </script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="login-page">
