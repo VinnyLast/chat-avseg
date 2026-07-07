@@ -9,6 +9,7 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const multer = require("multer");
+const db = require("./database/db");
 
 const app = express();
 const server = http.createServer(app);
@@ -25,13 +26,17 @@ const JWT_SECRET = process.env.JWT_SECRET || "sua-chave-secreta-super-segura";
 const WHATSAPP_API_URL = process.env.API_BASE_URL || "http://localhost:10000";
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || process.env.CHAT_PUBLIC_URL || "";
+// Quantos dias uma conversa finalizada fica na tabela ativa antes de ser
+// arquivada automaticamente (ver limparConversasAntigas). Configurável via
+// .env sem precisar mexer no código; 730 dias (2 anos) por padrão.
+const RETENCAO_DIAS_CONVERSAS = parseInt(process.env.RETENCAO_DIAS_CONVERSAS, 10) || 730;
 
 // =============================================================================
 // PASTAS
 // =============================================================================
 const DB_PATH = path.join(__dirname, "database");
+const ARQUIVO_HISTORICO_PATH = path.join(DB_PATH, "arquivo");
 const UPLOADS_PATH = path.join(__dirname, "uploads");
-fs.mkdirSync(DB_PATH, { recursive: true });
 fs.mkdirSync(UPLOADS_PATH, { recursive: true });
 
 // =============================================================================
@@ -49,7 +54,7 @@ app.use(express.static(path.join(__dirname, "../frontend")));
 function limparNomeArquivo(nome) {
   return String(nome || "arquivo")
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .replace(/[^a-zA-Z0-9._-]/g, "-")
     .replace(/-+/g, "-")
     .slice(0, 120);
@@ -65,36 +70,6 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage, limits: { fileSize: 25 * 1024 * 1024 } });
-
-// =============================================================================
-// BANCO DE DADOS (JSON)
-// =============================================================================
-const ARQUIVOS_DB = {
-  usuarios:  path.join(DB_PATH, "usuarios.json"),
-  conversas: path.join(DB_PATH, "conversas.json"),
-  mensagens: path.join(DB_PATH, "mensagens.json"),
-  clientes:  path.join(DB_PATH, "clientes.json"),
-  etiquetas: path.join(DB_PATH, "etiquetas.json"),
-};
-
-function carregarDB(arquivo) {
-  try {
-    if (!fs.existsSync(arquivo)) { fs.writeFileSync(arquivo, JSON.stringify([], null, 2)); return []; }
-    const conteudo = fs.readFileSync(arquivo, "utf8");
-    return JSON.parse(conteudo || "[]");
-  } catch (erro) {
-    console.error(`Erro ao carregar ${arquivo}:`, erro.message);
-    return [];
-  }
-}
-
-function salvarDB(arquivo, dados) {
-  try {
-    fs.writeFileSync(arquivo, JSON.stringify(dados, null, 2));
-  } catch (erro) {
-    console.error(`Erro ao salvar ${arquivo}:`, erro.message);
-  }
-}
 
 // =============================================================================
 // UTILITÁRIOS
@@ -126,62 +101,212 @@ function detectarTipoPorMime(mimeType = "") {
   return "arquivo";
 }
 
-function buscarAtendenteNome(usuarios, atendenteId) {
-  if (!atendenteId) return null;
-  return usuarios.find((u) => u.id === atendenteId)?.nome || null;
+// =============================================================================
+// BANCO DE DADOS — helpers de leitura/escrita (SQLite)
+// =============================================================================
+
+// Converte uma linha de "mensagens" (booleans salvos como 0/1) pro formato
+// que a API sempre devolveu.
+function mapearMensagem(row) {
+  return {
+    id: row.id,
+    conversaId: row.conversaId,
+    tipo: row.tipo || "texto",
+    texto: row.texto || "",
+    arquivoUrl: row.arquivoUrl || null,
+    mimeType: row.mimeType || null,
+    nomeArquivo: row.nomeArquivo || null,
+    origem: row.origem,
+    usuarioId: row.usuarioId || null,
+    lida: row.lida === 1 || row.lida === true,
+    privado: row.privado === 1 || row.privado === true,
+    criadoEm: row.criadoEm,
+  };
 }
 
-function montarConversaDetalhada(conversa, mensagens, usuarios) {
-  const mensagensConv = mensagens.filter((m) => m.conversaId === conversa.id);
-  const ultimaMensagem = mensagensConv[mensagensConv.length - 1];
-  const naoLidas = mensagensConv.filter((m) => !m.lida && m.origem === "cliente").length;
+// Ids de etiquetas aplicadas a UMA conversa (usado nas rotas de item único).
+function etiquetasDeConversa(conversaId) {
+  return db.prepare("SELECT etiquetaId FROM conversaEtiquetas WHERE conversaId = ?").all(conversaId).map((r) => r.etiquetaId);
+}
 
+// Todas as etiquetas de todas as conversas de uma vez, agrupadas por
+// conversaId — usado na listagem, pra não fazer 1 consulta por conversa.
+function mapaEtiquetasPorConversa() {
+  const linhas = db.prepare("SELECT conversaId, etiquetaId FROM conversaEtiquetas").all();
+  const mapa = new Map();
+  linhas.forEach((l) => {
+    if (!mapa.has(l.conversaId)) mapa.set(l.conversaId, []);
+    mapa.get(l.conversaId).push(l.etiquetaId);
+  });
+  return mapa;
+}
+
+// Junta a linha da conversa (já com atendenteNome via LEFT JOIN e os campos
+// de "última mensagem" denormalizados) com a lista de etiquetas — mesmo
+// formato que o frontend sempre recebeu.
+function mapearConversa(row, etiquetasIds) {
   return {
-    ...conversa,
-    atendenteNome: buscarAtendenteNome(usuarios, conversa.atendenteId),
-    ultimaMensagem: ultimaMensagem?.texto || "",
-    ultimaMensagemTipo: ultimaMensagem?.tipo || "texto",
-    ultimaMensagemNomeArquivo: ultimaMensagem?.nomeArquivo || "",
-    ultimaMensagemData: ultimaMensagem?.criadoEm || conversa.atualizadoEm,
-    mensagensNaoLidas: naoLidas,
-    totalMensagens: mensagensConv.length,
-    etiquetas: Array.isArray(conversa.etiquetas) ? conversa.etiquetas : [],
-    solicitouHumano: conversa.solicitouHumano === true,
+    id: row.id,
+    telefone: row.telefone,
+    clienteId: row.clienteId || null,
+    clienteNome: row.clienteNome || "",
+    status: row.status,
+    atendenteId: row.atendenteId || null,
+    atendenteNome: row.atendenteNome || null,
+    ultimaMensagem: row.ultimaMensagem || "",
+    ultimaMensagemTipo: row.ultimaMensagemTipo || "texto",
+    ultimaMensagemNomeArquivo: row.ultimaMensagemNomeArquivo || "",
+    ultimaMensagemData: row.ultimaMensagemData || row.atualizadoEm,
+    mensagensNaoLidas: row.mensagensNaoLidas || 0,
+    totalMensagens: row.totalMensagens || 0,
+    etiquetas: etiquetasIds || [],
+    solicitouHumano: row.solicitouHumano === 1 || row.solicitouHumano === true,
+    criadoEm: row.criadoEm,
+    atualizadoEm: row.atualizadoEm,
+    finalizadaEm: row.finalizadaEm || null,
   };
+}
+
+function buscarConversaComAtendente(conversaId) {
+  return db.prepare(`
+    SELECT c.*, u.nome AS atendenteNome
+    FROM conversas c
+    LEFT JOIN usuarios u ON u.id = c.atendenteId
+    WHERE c.id = ?
+  `).get(conversaId);
+}
+
+function conversaDetalhadaPorId(conversaId) {
+  const row = buscarConversaComAtendente(conversaId);
+  if (!row) return null;
+  return mapearConversa(row, etiquetasDeConversa(conversaId));
+}
+
+// Insere uma mensagem E atualiza os campos denormalizados da conversa
+// (última mensagem, total, não lidas) numa única chamada — é isso que evita
+// ter que recontar todas as mensagens da conversa a cada listagem.
+function inserirMensagemEAtualizarConversa(msg) {
+  const linha = {
+    id: msg.id,
+    conversaId: msg.conversaId,
+    tipo: msg.tipo || "texto",
+    texto: msg.texto || "",
+    arquivoUrl: msg.arquivoUrl || null,
+    mimeType: msg.mimeType || null,
+    nomeArquivo: msg.nomeArquivo || null,
+    origem: msg.origem,
+    usuarioId: msg.usuarioId || null,
+    lida: msg.lida ? 1 : 0,
+    privado: msg.privado ? 1 : 0,
+    criadoEm: msg.criadoEm,
+  };
+
+  db.prepare(`
+    INSERT INTO mensagens (id, conversaId, tipo, texto, arquivoUrl, mimeType, nomeArquivo, origem, usuarioId, lida, privado, criadoEm)
+    VALUES (@id, @conversaId, @tipo, @texto, @arquivoUrl, @mimeType, @nomeArquivo, @origem, @usuarioId, @lida, @privado, @criadoEm)
+  `).run(linha);
+
+  const incrementoNaoLida = linha.origem === "cliente" && linha.lida === 0 ? 1 : 0;
+  db.prepare(`
+    UPDATE conversas SET
+      ultimaMensagem = ?, ultimaMensagemTipo = ?, ultimaMensagemNomeArquivo = ?, ultimaMensagemData = ?,
+      totalMensagens = totalMensagens + 1,
+      mensagensNaoLidas = mensagensNaoLidas + ?,
+      atualizadoEm = ?
+    WHERE id = ?
+  `).run(linha.texto, linha.tipo, linha.nomeArquivo || "", linha.criadoEm, incrementoNaoLida, linha.criadoEm, linha.conversaId);
+
+  return mapearMensagem(linha);
+}
+
+// =============================================================================
+// LIMPEZA AUTOMÁTICA — arquiva (não apaga de verdade) conversas finalizadas
+// mais antigas que a retenção configurada, mantendo a tabela ativa enxuta.
+// Conversas aguardando/em atendimento nunca são tocadas, não importa a idade.
+// =============================================================================
+function limparConversasAntigas() {
+  try {
+    const corte = new Date();
+    corte.setDate(corte.getDate() - RETENCAO_DIAS_CONVERSAS);
+    const corteISO = corte.toISOString();
+
+    const antigas = db.prepare(`
+      SELECT * FROM conversas WHERE status = 'finalizada' AND finalizadaEm IS NOT NULL AND finalizadaEm < ?
+    `).all(corteISO);
+
+    if (antigas.length === 0) {
+      console.log(`🧹 Limpeza automática: nada a arquivar (retenção de ${RETENCAO_DIAS_CONVERSAS} dias).`);
+      return;
+    }
+
+    const ids = antigas.map((c) => c.id);
+    const placeholders = ids.map(() => "?").join(",");
+    const mensagensAntigas = db.prepare(`SELECT * FROM mensagens WHERE conversaId IN (${placeholders})`).all(...ids);
+    const etiquetasAntigas = db.prepare(`SELECT * FROM conversaEtiquetas WHERE conversaId IN (${placeholders})`).all(...ids);
+
+    fs.mkdirSync(ARQUIVO_HISTORICO_PATH, { recursive: true });
+    const caminhoArquivo = path.join(ARQUIVO_HISTORICO_PATH, `arquivo-${new Date().toISOString().slice(0, 10)}-${gerarId()}.json`);
+    fs.writeFileSync(caminhoArquivo, JSON.stringify({ conversas: antigas, mensagens: mensagensAntigas, conversaEtiquetas: etiquetasAntigas }, null, 2));
+
+    const remover = db.transaction(() => {
+      db.prepare(`DELETE FROM mensagens WHERE conversaId IN (${placeholders})`).run(...ids);
+      db.prepare(`DELETE FROM conversaEtiquetas WHERE conversaId IN (${placeholders})`).run(...ids);
+      db.prepare(`DELETE FROM conversas WHERE id IN (${placeholders})`).run(...ids);
+    });
+    remover();
+    db.exec("VACUUM");
+
+    console.log(`🧹 Limpeza automática: ${antigas.length} conversa(s) e ${mensagensAntigas.length} mensagem(ns) arquivadas em ${caminhoArquivo}.`);
+  } catch (erro) {
+    console.error("Erro na limpeza automática:", erro.message);
+  }
 }
 
 // =============================================================================
 // INICIALIZAÇÃO DE DADOS PADRÃO
 // =============================================================================
 function criarAdminSeNaoExistir() {
-  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-  if (usuarios.length === 0) {
+  const total = db.prepare("SELECT COUNT(*) n FROM usuarios").get().n;
+  if (total === 0) {
     const senhaHash = bcrypt.hashSync("admin123", 10);
-    usuarios.push({
-      id: gerarId(),
-      nome: "Administrador",
-      email: "admin@avseg.com",
-      senha: senhaHash,
-      role: "admin",
-      ativo: true,
-      criadoEm: new Date().toISOString(),
-    });
-    salvarDB(ARQUIVOS_DB.usuarios, usuarios);
+    db.prepare("INSERT INTO usuarios (id, nome, email, senha, role, ativo, criadoEm) VALUES (?, ?, ?, ?, 'admin', 1, ?)")
+      .run(gerarId(), "Administrador", "admin@avseg.com", senhaHash, new Date().toISOString());
     console.log("✅ Usuário admin criado: admin@avseg.com / admin123");
   }
 }
 
 function criarEtiquetasPadraoSeNaoExistir() {
-  if (fs.existsSync(ARQUIVOS_DB.etiquetas)) return;
+  const total = db.prepare("SELECT COUNT(*) n FROM etiquetas").get().n;
+  if (total > 0) return;
   const etiquetasPadrao = [
-    { id: gerarId(), nome: "Pagamento", cor: "#f5c400", criadoEm: new Date().toISOString() },
-    { id: gerarId(), nome: "Urgente",   cor: "#ef4444", criadoEm: new Date().toISOString() },
-    { id: gerarId(), nome: "Sinistro",  cor: "#3b82f6", criadoEm: new Date().toISOString() },
-    { id: gerarId(), nome: "Vistoria",  cor: "#22c55e", criadoEm: new Date().toISOString() },
-    { id: gerarId(), nome: "Cotação",   cor: "#a855f7", criadoEm: new Date().toISOString() },
+    { nome: "Pagamento", cor: "#f5c400" },
+    { nome: "Urgente", cor: "#ef4444" },
+    { nome: "Sinistro", cor: "#3b82f6" },
+    { nome: "Vistoria", cor: "#22c55e" },
+    { nome: "Cotação", cor: "#a855f7" },
   ];
-  salvarDB(ARQUIVOS_DB.etiquetas, etiquetasPadrao);
+  const inserir = db.prepare("INSERT INTO etiquetas (id, nome, cor, criadoEm) VALUES (?, ?, ?, ?)");
+  etiquetasPadrao.forEach((e) => inserir.run(gerarId(), e.nome, e.cor, new Date().toISOString()));
   console.log("✅ Etiquetas padrão criadas.");
+}
+
+const TEMPLATES_PADRAO = [
+  { id: '1', ordem: 1, atalho: '/ola',       titulo: 'Saudação',             texto: 'Olá, tudo bem? Sou da equipe AVSEG. Como posso te ajudar?' },
+  { id: '2', ordem: 2, atalho: '/cpf',       titulo: 'Pedir CPF ou placa',   texto: 'Me informe CPF ou placa do veículo, por favor.' },
+  { id: '3', ordem: 3, atalho: '/verificar', titulo: 'Verificando',           texto: 'Vou verificar para você.' },
+  { id: '4', ordem: 4, atalho: '/finalizar', titulo: 'Finalizar atendimento', texto: 'Seu atendimento foi finalizado. A AVSEG agradece!' },
+  { id: '5', ordem: 5, atalho: '/atraso',    titulo: 'Pagamento em atraso',   texto: 'Olá, boa tarde! Devido ao atraso, será necessário realizar o pagamento em atraso.' },
+  { id: '6', ordem: 6, atalho: '/pix',       titulo: 'Pagamento via PIX',     texto: 'Para pagar com PIX, é necessário selecionar e copiar a chave informada no boleto.' },
+  { id: '7', ordem: 7, atalho: '/detalhes',  titulo: 'Pedir detalhes',        texto: 'Gostaríamos de entender melhor sua solicitação. Poderia nos passar mais detalhes?' },
+  { id: '8', ordem: 8, atalho: '/setor',     titulo: 'Encaminhar setor',      texto: 'Encaminhei sua solicitação para o setor responsável. Peço que aguarde um momento.' },
+];
+
+function criarTemplatesPadraoSeNaoExistir() {
+  const total = db.prepare("SELECT COUNT(*) n FROM templates").get().n;
+  if (total > 0) return;
+  const inserir = db.prepare("INSERT INTO templates (id, ordem, atalho, titulo, texto, criadoEm) VALUES (?, ?, ?, ?, ?, ?)");
+  TEMPLATES_PADRAO.forEach((t) => inserir.run(t.id, t.ordem, t.atalho, t.titulo, t.texto, new Date().toISOString()));
+  console.log("✅ Templates padrão criados.");
 }
 
 // =============================================================================
@@ -205,8 +330,7 @@ app.post("/api/auth/login", (req, res) => {
   const { email, senha } = req.body;
   if (!email || !senha) return res.status(400).json({ erro: "Email e senha são obrigatórios" });
 
-  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-  const usuario = usuarios.find((u) => u.email === email && u.ativo !== false);
+  const usuario = db.prepare("SELECT * FROM usuarios WHERE email = ? AND ativo = 1").get(email);
   if (!usuario) return res.status(401).json({ erro: "Credenciais inválidas" });
 
   if (!bcrypt.compareSync(senha, usuario.senha)) return res.status(401).json({ erro: "Credenciais inválidas" });
@@ -221,18 +345,16 @@ app.post("/api/auth/registrar", autenticar, (req, res) => {
   if (!nome || !email || !senha) return res.status(400).json({ erro: "Dados incompletos" });
   if (senha.length < 6) return res.status(400).json({ erro: "A senha precisa ter pelo menos 6 caracteres" });
 
-  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-  if (usuarios.find((u) => u.email === email && u.ativo !== false)) return res.status(400).json({ erro: "Email já cadastrado" });
+  const existente = db.prepare("SELECT id FROM usuarios WHERE email = ? AND ativo = 1").get(email);
+  if (existente) return res.status(400).json({ erro: "Email já cadastrado" });
 
-  const novoUsuario = { id: gerarId(), nome, email, senha: bcrypt.hashSync(senha, 10), role: role || "atendente", ativo: true, criadoEm: new Date().toISOString() };
-  usuarios.push(novoUsuario);
-  salvarDB(ARQUIVOS_DB.usuarios, usuarios);
+  const novoUsuario = { id: gerarId(), nome, email, senha: bcrypt.hashSync(senha, 10), role: role || "atendente", criadoEm: new Date().toISOString() };
+  db.prepare("INSERT INTO usuarios (id, nome, email, senha, role, ativo, criadoEm) VALUES (@id, @nome, @email, @senha, @role, 1, @criadoEm)").run(novoUsuario);
   res.json({ id: novoUsuario.id, nome: novoUsuario.nome, email: novoUsuario.email, role: novoUsuario.role });
 });
 
 app.get("/api/auth/verificar", autenticar, (req, res) => {
-  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-  const usuario = usuarios.find((u) => u.id === req.usuario.id && u.ativo !== false);
+  const usuario = db.prepare("SELECT * FROM usuarios WHERE id = ? AND ativo = 1").get(req.usuario.id);
   if (!usuario) return res.status(401).json({ erro: "Usuário não encontrado" });
   res.json({ usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, role: usuario.role } });
 });
@@ -257,56 +379,54 @@ app.post("/api/upload", autenticar, upload.single("arquivo"), (req, res) => {
 // ROTAS DE CONVERSAS
 // =============================================================================
 app.get("/api/conversas", autenticar, (req, res) => {
-  const conversas = carregarDB(ARQUIVOS_DB.conversas);
-  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  const usuarios  = carregarDB(ARQUIVOS_DB.usuarios);
+  const linhas = db.prepare(`
+    SELECT c.*, u.nome AS atendenteNome
+    FROM conversas c
+    LEFT JOIN usuarios u ON u.id = c.atendenteId
+    ORDER BY c.ultimaMensagemData DESC
+  `).all();
 
-  const conversasComDetalhes = conversas
-    .map((conv) => montarConversaDetalhada(conv, mensagens, usuarios))
-    .sort((a, b) => new Date(b.ultimaMensagemData) - new Date(a.ultimaMensagemData));
-
-  res.json(conversasComDetalhes);
+  const mapaEtiquetas = mapaEtiquetasPorConversa();
+  res.json(linhas.map((row) => mapearConversa(row, mapaEtiquetas.get(row.id) || [])));
 });
 
 app.get("/api/conversas/:id", autenticar, (req, res) => {
-  const conversas = carregarDB(ARQUIVOS_DB.conversas);
-  const conversa  = conversas.find((c) => c.id === req.params.id);
-  if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada" });
-  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  const usuarios  = carregarDB(ARQUIVOS_DB.usuarios);
-  res.json(montarConversaDetalhada(conversa, mensagens, usuarios));
+  const row = buscarConversaComAtendente(req.params.id);
+  if (!row) return res.status(404).json({ erro: "Conversa não encontrada" });
+  res.json(mapearConversa(row, etiquetasDeConversa(row.id)));
 });
 
 app.patch("/api/conversas/:id", autenticar, async (req, res) => {
   const { status, atendenteId, assumir } = req.body;
-  const conversas = carregarDB(ARQUIVOS_DB.conversas);
-  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  const usuarios  = carregarDB(ARQUIVOS_DB.usuarios);
-  const indice = conversas.findIndex((c) => c.id === req.params.id);
-  if (indice === -1) return res.status(404).json({ erro: "Conversa não encontrada" });
+  const conversa = db.prepare("SELECT * FROM conversas WHERE id = ?").get(req.params.id);
+  if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada" });
 
-  const conversa = conversas[indice];
+  let novoAtendenteId = conversa.atendenteId;
+  let novoStatus = conversa.status;
+  let novaFinalizadaEm = conversa.finalizadaEm;
 
   if (assumir) {
     if (conversa.atendenteId && conversa.atendenteId !== req.usuario.id && conversa.status === "em_atendimento") {
-      const atendenteAtual = usuarios.find((u) => u.id === conversa.atendenteId);
+      const atendenteAtual = db.prepare("SELECT nome FROM usuarios WHERE id = ?").get(conversa.atendenteId);
       return res.status(409).json({ erro: `Essa conversa já está com ${atendenteAtual?.nome || "outro atendente"}.` });
     }
-    conversa.atendenteId = req.usuario.id;
-    conversa.status = "em_atendimento";
+    novoAtendenteId = req.usuario.id;
+    novoStatus = "em_atendimento";
   }
 
   if (status) {
-    conversa.status = status;
-    if (status === "finalizada") conversa.finalizadaEm = new Date().toISOString();
-    if (status === "aguardando" || status === "em_atendimento") conversa.finalizadaEm = null;
+    novoStatus = status;
+    if (status === "finalizada") novaFinalizadaEm = new Date().toISOString();
+    if (status === "aguardando" || status === "em_atendimento") novaFinalizadaEm = null;
   }
 
-  if (atendenteId !== undefined) conversa.atendenteId = atendenteId;
-  conversa.atualizadoEm = new Date().toISOString();
-  salvarDB(ARQUIVOS_DB.conversas, conversas);
+  if (atendenteId !== undefined) novoAtendenteId = atendenteId;
+  const atualizadoEm = new Date().toISOString();
 
-  const conversaAtualizada = montarConversaDetalhada(conversa, mensagens, usuarios);
+  db.prepare("UPDATE conversas SET status = ?, atendenteId = ?, finalizadaEm = ?, atualizadoEm = ? WHERE id = ?")
+    .run(novoStatus, novoAtendenteId, novaFinalizadaEm, atualizadoEm, conversa.id);
+
+  const conversaAtualizada = conversaDetalhadaPorId(conversa.id);
   io.emit("conversa_atualizada", conversaAtualizada);
 
   if (status === "finalizada") {
@@ -324,31 +444,22 @@ app.patch("/api/conversas/:id/transferir", autenticar, (req, res) => {
   if (!atendenteId) return res.status(400).json({ erro: "Informe o atendente de destino." });
   if (atendenteId === req.usuario.id) return res.status(400).json({ erro: "Você não pode transferir para você mesmo." });
 
-  const conversas = carregarDB(ARQUIVOS_DB.conversas);
-  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  const usuarios  = carregarDB(ARQUIVOS_DB.usuarios);
-  const indice = conversas.findIndex((c) => c.id === req.params.id);
-  if (indice === -1) return res.status(404).json({ erro: "Conversa não encontrada" });
-
-  const conversa = conversas[indice];
+  const conversa = db.prepare("SELECT * FROM conversas WHERE id = ?").get(req.params.id);
+  if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada" });
   if (conversa.status === "finalizada") return res.status(400).json({ erro: "Reabra a conversa antes de transferir." });
 
-  const usuarioLogado = usuarios.find((u) => u.id === req.usuario.id && u.ativo !== false);
-  const destino = usuarios.find((u) => u.id === atendenteId && u.ativo !== false);
+  const usuarioLogado = db.prepare("SELECT * FROM usuarios WHERE id = ? AND ativo = 1").get(req.usuario.id);
+  const destino = db.prepare("SELECT * FROM usuarios WHERE id = ? AND ativo = 1").get(atendenteId);
   if (!destino) return res.status(404).json({ erro: "Atendente de destino não encontrado." });
 
   const podeTransferir = usuarioLogado?.role === "admin" || !conversa.atendenteId || conversa.atendenteId === req.usuario.id;
   if (!podeTransferir) {
-    const atual = usuarios.find((u) => u.id === conversa.atendenteId);
+    const atual = db.prepare("SELECT nome FROM usuarios WHERE id = ?").get(conversa.atendenteId);
     return res.status(403).json({ erro: `Somente o admin ou ${atual?.nome || "o responsável"} pode transferir.` });
   }
 
-  const atendenteAnterior = usuarios.find((u) => u.id === conversa.atendenteId);
-  conversa.atendenteId = destino.id;
-  conversa.status = "em_atendimento";
-  conversa.finalizadaEm = null;
-  conversa.atualizadoEm = new Date().toISOString();
-
+  const atendenteAnterior = conversa.atendenteId ? db.prepare("SELECT nome FROM usuarios WHERE id = ?").get(conversa.atendenteId) : null;
+  const agora = new Date().toISOString();
   const mensagemSistema = {
     id: gerarId(),
     conversaId: conversa.id,
@@ -357,33 +468,34 @@ app.patch("/api/conversas/:id/transferir", autenticar, (req, res) => {
     origem: "sistema",
     usuarioId: req.usuario.id,
     lida: true,
-    criadoEm: new Date().toISOString(),
+    criadoEm: agora,
   };
 
-  mensagens.push(mensagemSistema);
-  salvarDB(ARQUIVOS_DB.conversas, conversas);
-  salvarDB(ARQUIVOS_DB.mensagens, mensagens);
+  let mensagemInserida;
+  const transacao = db.transaction(() => {
+    db.prepare("UPDATE conversas SET atendenteId = ?, status = 'em_atendimento', finalizadaEm = NULL, atualizadoEm = ? WHERE id = ?")
+      .run(destino.id, agora, conversa.id);
+    mensagemInserida = inserirMensagemEAtualizarConversa(mensagemSistema);
+  });
+  transacao();
 
-  const conversaAtualizada = montarConversaDetalhada(conversa, mensagens, usuarios);
-  io.emit("nova_mensagem", { conversaId: conversa.id, mensagem: mensagemSistema });
+  const conversaAtualizada = conversaDetalhadaPorId(conversa.id);
+  io.emit("nova_mensagem", { conversaId: conversa.id, mensagem: mensagemInserida });
   io.emit("conversa_atualizada", conversaAtualizada);
 
   res.json(conversaAtualizada);
 });
 
-
 // Ativar/desativar flag de solicitação de humano
 app.patch('/api/conversas/:id/humano', autenticar, (req, res) => {
   const { ativo } = req.body;
-  const conversas = carregarDB(ARQUIVOS_DB.conversas);
-  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  const usuarios  = carregarDB(ARQUIVOS_DB.usuarios);
-  const indice = conversas.findIndex((c) => c.id === req.params.id);
-  if (indice === -1) return res.status(404).json({ erro: 'Conversa não encontrada.' });
-  conversas[indice].solicitouHumano = ativo !== false ? true : false;
-  conversas[indice].atualizadoEm = new Date().toISOString();
-  salvarDB(ARQUIVOS_DB.conversas, conversas);
-  const conversaAtualizada = montarConversaDetalhada(conversas[indice], mensagens, usuarios);
+  const conversa = db.prepare("SELECT id FROM conversas WHERE id = ?").get(req.params.id);
+  if (!conversa) return res.status(404).json({ erro: 'Conversa não encontrada.' });
+
+  db.prepare("UPDATE conversas SET solicitouHumano = ?, atualizadoEm = ? WHERE id = ?")
+    .run(ativo !== false ? 1 : 0, new Date().toISOString(), conversa.id);
+
+  const conversaAtualizada = conversaDetalhadaPorId(conversa.id);
   io.emit('conversa_atualizada', conversaAtualizada);
   res.json(conversaAtualizada);
 });
@@ -392,22 +504,25 @@ app.patch('/api/conversas/:id/humano', autenticar, (req, res) => {
 // ROTAS DE MENSAGENS
 // =============================================================================
 app.get("/api/conversas/:id/mensagens", autenticar, (req, res) => {
-  const mensagensConv = carregarDB(ARQUIVOS_DB.mensagens).filter((m) => m.conversaId === req.params.id);
   const { limite, offset } = req.query;
 
-  if (!limite) return res.json(mensagensConv);
+  if (!limite) {
+    const todas = db.prepare("SELECT * FROM mensagens WHERE conversaId = ? ORDER BY criadoEm ASC").all(req.params.id);
+    return res.json(todas.map(mapearMensagem));
+  }
 
   const lim = Math.max(1, parseInt(limite, 10) || 50);
   const off = Math.max(0, parseInt(offset, 10) || 0);
-  const total = mensagensConv.length;
+  const total = db.prepare("SELECT COUNT(*) n FROM mensagens WHERE conversaId = ?").get(req.params.id).n;
   const fim = total - off;
   const inicio = Math.max(0, fim - lim);
+  const qtd = fim - inicio;
 
-  res.json({
-    mensagens: mensagensConv.slice(inicio, fim),
-    total,
-    temMais: inicio > 0,
-  });
+  const pagina = qtd > 0
+    ? db.prepare("SELECT * FROM mensagens WHERE conversaId = ? ORDER BY criadoEm ASC LIMIT ? OFFSET ?").all(req.params.id, qtd, inicio).map(mapearMensagem)
+    : [];
+
+  res.json({ mensagens: pagina, total, temMais: inicio > 0 });
 });
 
 // Adicionar nota interna (visível apenas para a equipe, não enviada ao WhatsApp)
@@ -415,12 +530,10 @@ app.post("/api/conversas/:id/notas", autenticar, (req, res) => {
   const { texto } = req.body;
   if (!texto?.trim()) return res.status(400).json({ erro: "Texto da nota é obrigatório." });
 
-  const conversas = carregarDB(ARQUIVOS_DB.conversas);
-  const conversa = conversas.find((c) => c.id === req.params.id);
+  const conversa = db.prepare("SELECT id FROM conversas WHERE id = ?").get(req.params.id);
   if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada." });
 
-  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  const novaNota = {
+  const novaNota = inserirMensagemEAtualizarConversa({
     id: gerarId(),
     conversaId: conversa.id,
     tipo: "nota",
@@ -430,10 +543,7 @@ app.post("/api/conversas/:id/notas", autenticar, (req, res) => {
     privado: true,
     lida: true,
     criadoEm: new Date().toISOString(),
-  };
-
-  mensagens.push(novaNota);
-  salvarDB(ARQUIVOS_DB.mensagens, mensagens);
+  });
 
   io.emit("nova_mensagem", { conversaId: conversa.id, mensagem: novaNota });
   res.json(novaNota);
@@ -443,13 +553,11 @@ app.post("/api/conversas/:id/mensagens", autenticar, async (req, res) => {
   const { texto, tipo, arquivoUrl, mimeType, nomeArquivo } = req.body;
   if (!texto && !arquivoUrl) return res.status(400).json({ erro: "Texto ou arquivo é obrigatório" });
 
-  const conversas = carregarDB(ARQUIVOS_DB.conversas);
-  const conversa  = conversas.find((c) => c.id === req.params.id);
+  const conversa = db.prepare("SELECT * FROM conversas WHERE id = ?").get(req.params.id);
   if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada" });
   if (conversa.status === "finalizada") return res.status(400).json({ erro: "Conversa finalizada. Reabra antes de responder." });
 
-  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  const novaMensagem = {
+  const novaMensagem = inserirMensagemEAtualizarConversa({
     id: gerarId(),
     conversaId: conversa.id,
     tipo: tipo || detectarTipoPorMime(mimeType || "") || "texto",
@@ -461,16 +569,11 @@ app.post("/api/conversas/:id/mensagens", autenticar, async (req, res) => {
     usuarioId: req.usuario.id,
     lida: true,
     criadoEm: new Date().toISOString(),
-  };
+  });
 
-  mensagens.push(novaMensagem);
-  salvarDB(ARQUIVOS_DB.mensagens, mensagens);
-
-  const indice = conversas.findIndex((c) => c.id === conversa.id);
-  conversas[indice].atualizadoEm = new Date().toISOString();
-  if (!conversas[indice].atendenteId) conversas[indice].atendenteId = req.usuario.id;
-  if (conversas[indice].status === "aguardando") conversas[indice].status = "em_atendimento";
-  salvarDB(ARQUIVOS_DB.conversas, conversas);
+  const novoAtendenteId = conversa.atendenteId || req.usuario.id;
+  const novoStatus = conversa.status === "aguardando" ? "em_atendimento" : conversa.status;
+  db.prepare("UPDATE conversas SET atendenteId = ?, status = ? WHERE id = ?").run(novoAtendenteId, novoStatus, conversa.id);
 
   try {
     const axios = require("axios");
@@ -485,49 +588,26 @@ app.post("/api/conversas/:id/mensagens", autenticar, async (req, res) => {
   } catch (_) {}
 
   io.emit("nova_mensagem", { conversaId: conversa.id, mensagem: novaMensagem });
-  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-  io.emit("conversa_atualizada", montarConversaDetalhada(conversas[indice], mensagens, usuarios));
+  io.emit("conversa_atualizada", conversaDetalhadaPorId(conversa.id));
 
   res.json(novaMensagem);
 });
 
 app.patch("/api/conversas/:id/mensagens/marcar-lidas", autenticar, (req, res) => {
-  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  let atualizadas = 0;
-  mensagens.forEach((m) => {
-    if (m.conversaId === req.params.id && !m.lida && m.origem === "cliente") { m.lida = true; atualizadas++; }
-  });
-  if (atualizadas > 0) salvarDB(ARQUIVOS_DB.mensagens, mensagens);
-  res.json({ mensagensAtualizadas: atualizadas });
+  const resultado = db.prepare("UPDATE mensagens SET lida = 1 WHERE conversaId = ? AND lida = 0 AND origem = 'cliente'").run(req.params.id);
+  if (resultado.changes > 0) {
+    db.prepare("UPDATE conversas SET mensagensNaoLidas = mensagensNaoLidas - ? WHERE id = ?").run(resultado.changes, req.params.id);
+  }
+  res.json({ mensagensAtualizadas: resultado.changes });
 });
-
 
 // =============================================================================
 // ROTAS DE TEMPLATES RÁPIDOS
 // =============================================================================
-const ARQUIVO_TEMPLATES = path.join(DB_PATH, 'templates.json');
-
-const TEMPLATES_PADRAO = [
-  { id: '1', ordem: 1, atalho: '/ola',       titulo: 'Saudação',             texto: 'Olá, tudo bem? Sou da equipe AVSEG. Como posso te ajudar?' },
-  { id: '2', ordem: 2, atalho: '/cpf',       titulo: 'Pedir CPF ou placa',   texto: 'Me informe CPF ou placa do veículo, por favor.' },
-  { id: '3', ordem: 3, atalho: '/verificar', titulo: 'Verificando',           texto: 'Vou verificar para você.' },
-  { id: '4', ordem: 4, atalho: '/finalizar', titulo: 'Finalizar atendimento', texto: 'Seu atendimento foi finalizado. A AVSEG agradece!' },
-  { id: '5', ordem: 5, atalho: '/atraso',    titulo: 'Pagamento em atraso',   texto: 'Olá, boa tarde! Devido ao atraso, será necessário realizar o pagamento em atraso.' },
-  { id: '6', ordem: 6, atalho: '/pix',       titulo: 'Pagamento via PIX',     texto: 'Para pagar com PIX, é necessário selecionar e copiar a chave informada no boleto.' },
-  { id: '7', ordem: 7, atalho: '/detalhes',  titulo: 'Pedir detalhes',        texto: 'Gostaríamos de entender melhor sua solicitação. Poderia nos passar mais detalhes?' },
-  { id: '8', ordem: 8, atalho: '/setor',     titulo: 'Encaminhar setor',      texto: 'Encaminhei sua solicitação para o setor responsável. Peço que aguarde um momento.' },
-];
-
-function criarTemplatesPadraoSeNaoExistir() {
-  if (fs.existsSync(ARQUIVO_TEMPLATES)) return;
-  salvarDB(ARQUIVO_TEMPLATES, TEMPLATES_PADRAO);
-  console.log('✅ Templates padrão criados.');
-}
 
 // Listar templates (público para atendentes)
 app.get('/api/templates', autenticar, (req, res) => {
-  const templates = carregarDB(ARQUIVO_TEMPLATES);
-  res.json(templates.sort((a, b) => (a.ordem ?? 999) - (b.ordem ?? 999)));
+  res.json(db.prepare("SELECT * FROM templates ORDER BY ordem ASC").all());
 });
 
 // Criar template (somente admin)
@@ -537,16 +617,12 @@ app.post('/api/templates', autenticar, (req, res) => {
   if (!titulo?.trim() || !atalho?.trim() || !texto?.trim()) return res.status(400).json({ erro: 'Título, atalho e texto são obrigatórios.' });
 
   const atalhoFinal = atalho.trim().startsWith('/') ? atalho.trim() : '/' + atalho.trim();
-  const templates = carregarDB(ARQUIVO_TEMPLATES);
+  const conflito = db.prepare("SELECT id FROM templates WHERE LOWER(atalho) = LOWER(?)").get(atalhoFinal);
+  if (conflito) return res.status(400).json({ erro: 'Já existe um template com este atalho.' });
 
-  if (templates.find((t) => t.atalho.toLowerCase() === atalhoFinal.toLowerCase())) {
-    return res.status(400).json({ erro: 'Já existe um template com este atalho.' });
-  }
-
-  const maxOrdem = templates.reduce((max, t) => Math.max(max, t.ordem ?? 0), 0);
+  const maxOrdem = db.prepare("SELECT MAX(ordem) m FROM templates").get().m || 0;
   const novo = { id: gerarId(), ordem: maxOrdem + 1, titulo: titulo.trim(), atalho: atalhoFinal, texto: texto.trim(), criadoEm: new Date().toISOString() };
-  templates.push(novo);
-  salvarDB(ARQUIVO_TEMPLATES, templates);
+  db.prepare("INSERT INTO templates (id, ordem, titulo, atalho, texto, criadoEm) VALUES (@id, @ordem, @titulo, @atalho, @texto, @criadoEm)").run(novo);
   res.json(novo);
 });
 
@@ -554,31 +630,29 @@ app.post('/api/templates', autenticar, (req, res) => {
 app.patch('/api/templates/:id', autenticar, (req, res) => {
   if (req.usuario.role !== 'admin') return res.status(403).json({ erro: 'Sem permissão.' });
   const { titulo, atalho, texto } = req.body;
-  const templates = carregarDB(ARQUIVO_TEMPLATES);
-  const idx = templates.findIndex((t) => t.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ erro: 'Template não encontrado.' });
+  const existente = db.prepare("SELECT * FROM templates WHERE id = ?").get(req.params.id);
+  if (!existente) return res.status(404).json({ erro: 'Template não encontrado.' });
 
-  if (titulo) templates[idx].titulo = titulo.trim();
-  if (texto)  templates[idx].texto  = texto.trim();
+  const novoTitulo = titulo ? titulo.trim() : existente.titulo;
+  const novoTexto = texto ? texto.trim() : existente.texto;
+  let novoAtalho = existente.atalho;
   if (atalho) {
     const atalhoFinal = atalho.trim().startsWith('/') ? atalho.trim() : '/' + atalho.trim();
-    const conflito = templates.find((t) => t.id !== req.params.id && t.atalho.toLowerCase() === atalhoFinal.toLowerCase());
+    const conflito = db.prepare("SELECT id FROM templates WHERE id != ? AND LOWER(atalho) = LOWER(?)").get(req.params.id, atalhoFinal);
     if (conflito) return res.status(400).json({ erro: 'Atalho já usado por outro template.' });
-    templates[idx].atalho = atalhoFinal;
+    novoAtalho = atalhoFinal;
   }
-  templates[idx].atualizadoEm = new Date().toISOString();
-  salvarDB(ARQUIVO_TEMPLATES, templates);
-  res.json(templates[idx]);
+
+  db.prepare("UPDATE templates SET titulo = ?, texto = ?, atalho = ?, atualizadoEm = ? WHERE id = ?")
+    .run(novoTitulo, novoTexto, novoAtalho, new Date().toISOString(), req.params.id);
+  res.json(db.prepare("SELECT * FROM templates WHERE id = ?").get(req.params.id));
 });
 
 // Excluir template (somente admin)
 app.delete('/api/templates/:id', autenticar, (req, res) => {
   if (req.usuario.role !== 'admin') return res.status(403).json({ erro: 'Sem permissão.' });
-  const templates = carregarDB(ARQUIVO_TEMPLATES);
-  const idx = templates.findIndex((t) => t.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ erro: 'Template não encontrado.' });
-  templates.splice(idx, 1);
-  salvarDB(ARQUIVO_TEMPLATES, templates);
+  const resultado = db.prepare("DELETE FROM templates WHERE id = ?").run(req.params.id);
+  if (resultado.changes === 0) return res.status(404).json({ erro: 'Template não encontrado.' });
   res.json({ ok: true });
 });
 
@@ -587,12 +661,10 @@ app.patch('/api/templates/reordenar', autenticar, (req, res) => {
   if (req.usuario.role !== 'admin') return res.status(403).json({ erro: 'Sem permissão.' });
   const { ordem } = req.body; // array de ids na nova ordem
   if (!Array.isArray(ordem)) return res.status(400).json({ erro: 'ordem deve ser um array de IDs.' });
-  const templates = carregarDB(ARQUIVO_TEMPLATES);
-  ordem.forEach((id, i) => {
-    const t = templates.find((x) => x.id === id);
-    if (t) t.ordem = i + 1;
-  });
-  salvarDB(ARQUIVO_TEMPLATES, templates);
+
+  const atualizar = db.prepare("UPDATE templates SET ordem = ? WHERE id = ?");
+  const transacao = db.transaction(() => { ordem.forEach((id, i) => atualizar.run(i + 1, id)); });
+  transacao();
   res.json({ ok: true });
 });
 
@@ -600,7 +672,7 @@ app.patch('/api/templates/reordenar', autenticar, (req, res) => {
 // ROTAS DE ETIQUETAS
 // =============================================================================
 app.get("/api/etiquetas", autenticar, (req, res) => {
-  res.json(carregarDB(ARQUIVOS_DB.etiquetas));
+  res.json(db.prepare("SELECT * FROM etiquetas").all());
 });
 
 app.post("/api/etiquetas", autenticar, (req, res) => {
@@ -608,45 +680,32 @@ app.post("/api/etiquetas", autenticar, (req, res) => {
   const { nome, cor } = req.body;
   if (!nome?.trim()) return res.status(400).json({ erro: "Nome da etiqueta é obrigatório." });
 
-  const etiquetas = carregarDB(ARQUIVOS_DB.etiquetas);
-  if (etiquetas.find((e) => e.nome.toLowerCase() === nome.trim().toLowerCase())) return res.status(400).json({ erro: "Já existe uma etiqueta com este nome." });
+  const conflito = db.prepare("SELECT id FROM etiquetas WHERE LOWER(nome) = LOWER(?)").get(nome.trim());
+  if (conflito) return res.status(400).json({ erro: "Já existe uma etiqueta com este nome." });
 
   const nova = { id: gerarId(), nome: nome.trim(), cor: cor || "#f5c400", criadoEm: new Date().toISOString() };
-  etiquetas.push(nova);
-  salvarDB(ARQUIVOS_DB.etiquetas, etiquetas);
+  db.prepare("INSERT INTO etiquetas (id, nome, cor, criadoEm) VALUES (@id, @nome, @cor, @criadoEm)").run(nova);
   res.json(nova);
 });
 
 app.patch("/api/etiquetas/:id", autenticar, (req, res) => {
   if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Sem permissão." });
   const { nome, cor } = req.body;
-  const etiquetas = carregarDB(ARQUIVOS_DB.etiquetas);
-  const indice = etiquetas.findIndex((e) => e.id === req.params.id);
-  if (indice === -1) return res.status(404).json({ erro: "Etiqueta não encontrada." });
-  if (nome) etiquetas[indice].nome = nome.trim();
-  if (cor)  etiquetas[indice].cor  = cor;
-  salvarDB(ARQUIVOS_DB.etiquetas, etiquetas);
-  res.json(etiquetas[indice]);
+  const existente = db.prepare("SELECT * FROM etiquetas WHERE id = ?").get(req.params.id);
+  if (!existente) return res.status(404).json({ erro: "Etiqueta não encontrada." });
+
+  db.prepare("UPDATE etiquetas SET nome = ?, cor = ? WHERE id = ?")
+    .run(nome ? nome.trim() : existente.nome, cor || existente.cor, req.params.id);
+  res.json(db.prepare("SELECT * FROM etiquetas WHERE id = ?").get(req.params.id));
 });
 
 app.delete("/api/etiquetas/:id", autenticar, (req, res) => {
   if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Sem permissão." });
-  const etiquetas = carregarDB(ARQUIVOS_DB.etiquetas);
-  const indice = etiquetas.findIndex((e) => e.id === req.params.id);
-  if (indice === -1) return res.status(404).json({ erro: "Etiqueta não encontrada." });
-  etiquetas.splice(indice, 1);
-  salvarDB(ARQUIVOS_DB.etiquetas, etiquetas);
+  const resultado = db.prepare("DELETE FROM etiquetas WHERE id = ?").run(req.params.id);
+  if (resultado.changes === 0) return res.status(404).json({ erro: "Etiqueta não encontrada." });
 
-  // Remove da todas as conversas
-  const conversas = carregarDB(ARQUIVOS_DB.conversas);
-  let alterou = false;
-  conversas.forEach((c) => {
-    if (Array.isArray(c.etiquetas) && c.etiquetas.includes(req.params.id)) {
-      c.etiquetas = c.etiquetas.filter((id) => id !== req.params.id);
-      alterou = true;
-    }
-  });
-  if (alterou) salvarDB(ARQUIVOS_DB.conversas, conversas);
+  // Remove de todas as conversas
+  db.prepare("DELETE FROM conversaEtiquetas WHERE etiquetaId = ?").run(req.params.id);
   res.json({ ok: true });
 });
 
@@ -655,42 +714,29 @@ app.post("/api/conversas/:id/etiquetas", autenticar, (req, res) => {
   const { etiquetaId } = req.body;
   if (!etiquetaId) return res.status(400).json({ erro: "etiquetaId é obrigatório." });
 
-  const etiquetas = carregarDB(ARQUIVOS_DB.etiquetas);
-  if (!etiquetas.find((e) => e.id === etiquetaId)) return res.status(404).json({ erro: "Etiqueta não encontrada." });
+  const etiqueta = db.prepare("SELECT id FROM etiquetas WHERE id = ?").get(etiquetaId);
+  if (!etiqueta) return res.status(404).json({ erro: "Etiqueta não encontrada." });
 
-  const conversas = carregarDB(ARQUIVOS_DB.conversas);
-  const indice = conversas.findIndex((c) => c.id === req.params.id);
-  if (indice === -1) return res.status(404).json({ erro: "Conversa não encontrada." });
+  const conversa = db.prepare("SELECT id FROM conversas WHERE id = ?").get(req.params.id);
+  if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada." });
 
-  if (!Array.isArray(conversas[indice].etiquetas)) conversas[indice].etiquetas = [];
-  if (!conversas[indice].etiquetas.includes(etiquetaId)) {
-    conversas[indice].etiquetas.push(etiquetaId);
-    conversas[indice].atualizadoEm = new Date().toISOString();
-    salvarDB(ARQUIVOS_DB.conversas, conversas);
-  }
+  db.prepare("INSERT OR IGNORE INTO conversaEtiquetas (conversaId, etiquetaId) VALUES (?, ?)").run(conversa.id, etiquetaId);
+  db.prepare("UPDATE conversas SET atualizadoEm = ? WHERE id = ?").run(new Date().toISOString(), conversa.id);
 
-  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  const usuarios  = carregarDB(ARQUIVOS_DB.usuarios);
-  const conversaAtualizada = montarConversaDetalhada(conversas[indice], mensagens, usuarios);
+  const conversaAtualizada = conversaDetalhadaPorId(conversa.id);
   io.emit("conversa_atualizada", conversaAtualizada);
   res.json(conversaAtualizada);
 });
 
 // Remover etiqueta de conversa
 app.delete("/api/conversas/:id/etiquetas/:etiquetaId", autenticar, (req, res) => {
-  const conversas = carregarDB(ARQUIVOS_DB.conversas);
-  const indice = conversas.findIndex((c) => c.id === req.params.id);
-  if (indice === -1) return res.status(404).json({ erro: "Conversa não encontrada." });
+  const conversa = db.prepare("SELECT id FROM conversas WHERE id = ?").get(req.params.id);
+  if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada." });
 
-  if (Array.isArray(conversas[indice].etiquetas)) {
-    conversas[indice].etiquetas = conversas[indice].etiquetas.filter((id) => id !== req.params.etiquetaId);
-    conversas[indice].atualizadoEm = new Date().toISOString();
-    salvarDB(ARQUIVOS_DB.conversas, conversas);
-  }
+  db.prepare("DELETE FROM conversaEtiquetas WHERE conversaId = ? AND etiquetaId = ?").run(conversa.id, req.params.etiquetaId);
+  db.prepare("UPDATE conversas SET atualizadoEm = ? WHERE id = ?").run(new Date().toISOString(), conversa.id);
 
-  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
-  const usuarios  = carregarDB(ARQUIVOS_DB.usuarios);
-  const conversaAtualizada = montarConversaDetalhada(conversas[indice], mensagens, usuarios);
+  const conversaAtualizada = conversaDetalhadaPorId(conversa.id);
   io.emit("conversa_atualizada", conversaAtualizada);
   res.json(conversaAtualizada);
 });
@@ -699,7 +745,7 @@ app.delete("/api/conversas/:id/etiquetas/:etiquetaId", autenticar, (req, res) =>
 // ROTAS DE CLIENTES
 // =============================================================================
 app.get("/api/clientes", autenticar, (req, res) => {
-  res.json(carregarDB(ARQUIVOS_DB.clientes));
+  res.json(db.prepare("SELECT * FROM clientes").all());
 });
 
 // =============================================================================
@@ -708,28 +754,27 @@ app.get("/api/clientes", autenticar, (req, res) => {
 app.get("/api/metricas", autenticar, (req, res) => {
   if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Sem permissão." });
 
-  const conversas = carregarDB(ARQUIVOS_DB.conversas);
-  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-
   const inicioHoje = new Date();
   inicioHoje.setHours(0, 0, 0, 0);
   const inicioSemana = new Date(inicioHoje);
   inicioSemana.setDate(inicioSemana.getDate() - 7);
 
-  const conversasHoje = conversas.filter((c) => new Date(c.criadoEm) >= inicioHoje).length;
-  const conversasSemana = conversas.filter((c) => new Date(c.criadoEm) >= inicioSemana).length;
+  const conversasHoje = db.prepare("SELECT COUNT(*) n FROM conversas WHERE criadoEm >= ?").get(inicioHoje.toISOString()).n;
+  const conversasSemana = db.prepare("SELECT COUNT(*) n FROM conversas WHERE criadoEm >= ?").get(inicioSemana.toISOString()).n;
 
-  const porStatus = {
-    aguardando: conversas.filter((c) => c.status === "aguardando").length,
-    em_atendimento: conversas.filter((c) => c.status === "em_atendimento").length,
-    finalizada: conversas.filter((c) => c.status === "finalizada").length,
-  };
+  const porStatus = { aguardando: 0, em_atendimento: 0, finalizada: 0 };
+  db.prepare("SELECT status, COUNT(*) n FROM conversas GROUP BY status").all()
+    .forEach((r) => { if (porStatus[r.status] !== undefined) porStatus[r.status] = r.n; });
 
-  const porAtendente = usuarios
-    .filter((u) => u.ativo !== false)
-    .map((u) => ({ id: u.id, nome: u.nome, total: conversas.filter((c) => c.atendenteId === u.id).length }))
-    .filter((a) => a.total > 0)
-    .sort((a, b) => b.total - a.total);
+  const porAtendente = db.prepare(`
+    SELECT u.id AS id, u.nome AS nome, COUNT(c.id) AS total
+    FROM usuarios u
+    JOIN conversas c ON c.atendenteId = u.id
+    WHERE u.ativo = 1
+    GROUP BY u.id
+    HAVING total > 0
+    ORDER BY total DESC
+  `).all();
 
   res.json({ conversasHoje, conversasSemana, porStatus, porAtendente });
 });
@@ -738,33 +783,29 @@ app.get("/api/metricas", autenticar, (req, res) => {
 // ROTAS DE USUÁRIOS
 // =============================================================================
 app.get("/api/usuarios/atendentes", autenticar, (req, res) => {
-  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-  res.json(usuarios.filter((u) => u.ativo !== false).map(({ senha, ...u }) => u));
+  const usuarios = db.prepare("SELECT id, nome, email, role, ativo, criadoEm FROM usuarios WHERE ativo = 1").all();
+  res.json(usuarios.map((u) => ({ ...u, ativo: true })));
 });
 
 app.get("/api/usuarios", autenticar, (req, res) => {
   if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Sem permissão" });
-  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-  res.json(usuarios.filter((u) => u.ativo !== false).map(({ senha, ...u }) => u));
+  const usuarios = db.prepare("SELECT id, nome, email, role, ativo, criadoEm FROM usuarios WHERE ativo = 1").all();
+  res.json(usuarios.map((u) => ({ ...u, ativo: true })));
 });
 
 app.delete("/api/usuarios/:id", autenticar, (req, res) => {
   if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Sem permissão" });
   if (req.params.id === req.usuario.id) return res.status(400).json({ erro: "Você não pode excluir seu próprio usuário." });
 
-  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-  const indice = usuarios.findIndex((u) => u.id === req.params.id && u.ativo !== false);
-  if (indice === -1) return res.status(404).json({ erro: "Usuário não encontrado" });
+  const usuario = db.prepare("SELECT * FROM usuarios WHERE id = ? AND ativo = 1").get(req.params.id);
+  if (!usuario) return res.status(404).json({ erro: "Usuário não encontrado" });
 
-  const usuario = usuarios[indice];
   if (usuario.role === "admin") {
-    const adminsAtivos = usuarios.filter((u) => u.role === "admin" && u.ativo !== false);
-    if (adminsAtivos.length <= 1) return res.status(400).json({ erro: "Não é possível excluir o último administrador." });
+    const totalAdmins = db.prepare("SELECT COUNT(*) n FROM usuarios WHERE role = 'admin' AND ativo = 1").get().n;
+    if (totalAdmins <= 1) return res.status(400).json({ erro: "Não é possível excluir o último administrador." });
   }
 
-  usuarios[indice].ativo = false;
-  usuarios[indice].excluidoEm = new Date().toISOString();
-  salvarDB(ARQUIVOS_DB.usuarios, usuarios);
+  db.prepare("UPDATE usuarios SET ativo = 0, excluidoEm = ? WHERE id = ?").run(new Date().toISOString(), usuario.id);
   res.json({ ok: true, mensagem: "Usuário excluído com sucesso." });
 });
 
@@ -781,71 +822,67 @@ app.post("/api/webhook/whatsapp", (req, res) => {
   if (!telefone || (!mensagem && !arquivoUrl)) return res.status(400).json({ erro: "Dados incompletos" });
 
   const telefoneNormalizado = normalizarTelefone(telefone);
-  const conversas = carregarDB(ARQUIVOS_DB.conversas);
-  const clientes  = carregarDB(ARQUIVOS_DB.clientes);
-  const mensagens = carregarDB(ARQUIVOS_DB.mensagens);
+  const agora = new Date().toISOString();
 
-  let cliente = clientes.find((c) => c.telefone === telefoneNormalizado);
-  if (!cliente) {
-    cliente = { id: gerarId(), telefone: telefoneNormalizado, nome: nomeCliente || "Cliente", criadoEm: new Date().toISOString() };
-    clientes.push(cliente);
-    salvarDB(ARQUIVOS_DB.clientes, clientes);
-  } else if (nomeCliente && cliente.nome !== nomeCliente) {
-    cliente.nome = nomeCliente;
-    salvarDB(ARQUIVOS_DB.clientes, clientes);
-  }
-
-  let conversa = conversas.find((c) => c.telefone === telefoneNormalizado && c.status !== "finalizada");
   let novaConversa = false;
+  let conversaId;
+  let mensagemInserida;
 
-  if (!conversa) {
-    conversa = {
-      id: gerarId(),
-      telefone: telefoneNormalizado,
-      clienteId: cliente.id,
-      clienteNome: cliente.nome,
-      status: "aguardando",
-      atendenteId: null,
-      etiquetas: [],
-      solicitouHumano: pedidoHumano,
-      criadoEm: new Date().toISOString(),
-      atualizadoEm: new Date().toISOString(),
-    };
-    conversas.push(conversa);
-    novaConversa = true;
-  } else {
-    const indice = conversas.findIndex((c) => c.id === conversa.id);
-    conversas[indice].atualizadoEm = new Date().toISOString();
-    if (pedidoHumano) conversas[indice].solicitouHumano = true;
-    conversa = conversas[indice];
-  }
+  const transacao = db.transaction(() => {
+    let cliente = db.prepare("SELECT * FROM clientes WHERE telefone = ?").get(telefoneNormalizado);
+    if (!cliente) {
+      cliente = { id: gerarId(), telefone: telefoneNormalizado, nome: nomeCliente || "Cliente", criadoEm: agora };
+      db.prepare("INSERT INTO clientes (id, telefone, nome, criadoEm) VALUES (@id, @telefone, @nome, @criadoEm)").run(cliente);
+    } else if (nomeCliente && cliente.nome !== nomeCliente) {
+      db.prepare("UPDATE clientes SET nome = ? WHERE id = ?").run(nomeCliente, cliente.id);
+      cliente.nome = nomeCliente;
+    }
 
-  salvarDB(ARQUIVOS_DB.conversas, conversas);
+    let conversa = db.prepare("SELECT * FROM conversas WHERE telefone = ? AND status != 'finalizada'").get(telefoneNormalizado);
 
-  const novaMensagem = {
-    id: gerarId(),
-    conversaId: conversa.id,
-    tipo: tipo || detectarTipoPorMime(mimeType || "") || "texto",
-    texto: mensagem || "",
-    arquivoUrl: arquivoUrl || null,
-    mimeType: mimeType || null,
-    nomeArquivo: nomeArquivo || null,
-    origem: "cliente",
-    lida: false,
-    criadoEm: new Date().toISOString(),
-  };
+    if (!conversa) {
+      conversa = {
+        id: gerarId(), telefone: telefoneNormalizado, clienteId: cliente.id, clienteNome: cliente.nome,
+        status: "aguardando", atendenteId: null, solicitouHumano: pedidoHumano ? 1 : 0,
+        criadoEm: agora, atualizadoEm: agora, finalizadaEm: null,
+        ultimaMensagem: "", ultimaMensagemTipo: "texto", ultimaMensagemNomeArquivo: "", ultimaMensagemData: agora,
+        mensagensNaoLidas: 0, totalMensagens: 0,
+      };
+      db.prepare(`
+        INSERT INTO conversas (
+          id, telefone, clienteId, clienteNome, status, atendenteId, solicitouHumano,
+          criadoEm, atualizadoEm, finalizadaEm,
+          ultimaMensagem, ultimaMensagemTipo, ultimaMensagemNomeArquivo, ultimaMensagemData,
+          mensagensNaoLidas, totalMensagens
+        ) VALUES (
+          @id, @telefone, @clienteId, @clienteNome, @status, @atendenteId, @solicitouHumano,
+          @criadoEm, @atualizadoEm, @finalizadaEm,
+          @ultimaMensagem, @ultimaMensagemTipo, @ultimaMensagemNomeArquivo, @ultimaMensagemData,
+          @mensagensNaoLidas, @totalMensagens
+        )
+      `).run(conversa);
+      novaConversa = true;
+    } else {
+      db.prepare("UPDATE conversas SET atualizadoEm = ?, solicitouHumano = CASE WHEN ? = 1 THEN 1 ELSE solicitouHumano END WHERE id = ?")
+        .run(agora, pedidoHumano ? 1 : 0, conversa.id);
+    }
 
-  mensagens.push(novaMensagem);
-  salvarDB(ARQUIVOS_DB.mensagens, mensagens);
+    conversaId = conversa.id;
+    mensagemInserida = inserirMensagemEAtualizarConversa({
+      id: gerarId(), conversaId: conversa.id, tipo: tipo || detectarTipoPorMime(mimeType || "") || "texto",
+      texto: mensagem || "", arquivoUrl: arquivoUrl || null, mimeType: mimeType || null, nomeArquivo: nomeArquivo || null,
+      origem: "cliente", lida: false, criadoEm: agora,
+    });
+  });
+  transacao();
 
-  const usuarios = carregarDB(ARQUIVOS_DB.usuarios);
-  const conversaDetalhada = montarConversaDetalhada(conversa, mensagens, usuarios);
+  const conversaDetalhada = conversaDetalhadaPorId(conversaId);
 
   if (novaConversa) io.emit("nova_conversa", conversaDetalhada);
-  io.emit("nova_mensagem", { conversaId: conversa.id, mensagem: novaMensagem });
+  io.emit("nova_mensagem", { conversaId, mensagem: mensagemInserida });
   io.emit("conversa_atualizada", conversaDetalhada);
 
-  res.json({ ok: true, conversaId: conversa.id });
+  res.json({ ok: true, conversaId });
 });
 
 // =============================================================================
@@ -869,4 +906,9 @@ server.listen(PORT, () => {
   console.log(`🚀 Servidor de chat rodando na porta ${PORT}`);
   console.log(`📱 Dashboard: http://localhost:${PORT}`);
   console.log(`🔑 Login padrão: admin@avseg.com / admin123`);
+
+  // Limpeza automática de conversas antigas (arquiva, não apaga de verdade) —
+  // roda pouco depois do boot e depois a cada 24h.
+  setTimeout(limparConversasAntigas, 10_000);
+  setInterval(limparConversasAntigas, 24 * 60 * 60 * 1000);
 });

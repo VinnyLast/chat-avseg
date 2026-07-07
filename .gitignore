@@ -5,7 +5,9 @@ backend/node_modules/
 backend/.env
 frontend/.env
 
-backend/database/
+backend/database/*
+!backend/database/db.js
+!backend/database/migrar-json-para-sqlite.js
 backend/uploads/
 .claude/
 logs/
