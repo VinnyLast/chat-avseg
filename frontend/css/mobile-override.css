@@ -8,10 +8,26 @@
   /* ── HEADER DO CHAT ─────────────────────────────────────────── */
 
   .chat-header {
-    padding: 10px 12px 8px !important;
+    padding: 8px 10px 6px !important;
     flex-direction: column !important;
-    gap: 6px !important;
+    gap: 4px !important;
     align-items: stretch !important;
+  }
+
+  /* Menos espaço entre nome/telefone/atendente — texto mais compacto */
+  .chat-header-text {
+    line-height: 1.15 !important;
+  }
+
+  .chat-header-text h3,
+  .chat-telefone,
+  .chat-atendente-info {
+    margin: 0 !important;
+  }
+
+  /* A linha de botões cola mais perto do cabeçalho */
+  .chat-header-actions {
+    margin-top: 4px !important;
   }
 
   /* Linha 1 — voltar + nome */
@@ -92,17 +108,33 @@
     display: none !important;
   }
 
-  /* Todos os botões e select — mesma altura, compactos */
+  /* Todos os botões e select — mesma altura, compactos.
+     IMPORTANTE: não forçar "display" aqui — o JS (dashboard.js) controla
+     display:none/inline-flex nos botões Assumir/Finalizar/Transferir/Reabrir
+     conforme o status da conversa. Um "display:inline-flex !important" aqui
+     reexibia botões que deveriam estar escondidos, forçando quebra de linha. */
   .chat-header-actions > * {
     flex-shrink: 0 !important;
     height: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    box-sizing: border-box !important;
+    line-height: 1 !important;
     font-size: 11px !important;
     padding: 0 10px !important;
     border-radius: 8px !important;
     white-space: nowrap !important;
-    display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
+  }
+
+  /* SEM !important aqui de propósito: o inline style que o JS aplica
+     (display:none ou display:inline-flex, conforme o status da conversa)
+     tem que vencer. Serialização do atributo style varia entre navegadores
+     ("display:none" vs "display: none"), então um seletor de atributo não é
+     confiável — a única forma robusta é deixar a cascata normal decidir. */
+  .chat-header-actions > * {
+    display: inline-flex;
   }
 
   /* Select de status mais estreito */
@@ -136,8 +168,12 @@
     object-fit: cover !important;
   }
 
-  /* Bolha que contém imagem — sem padding extra */
-  .mensagem:has(.mensagem-imagem) .mensagem-conteudo {
+  /* Bolha que contém imagem — sem padding extra.
+     :has() não existe no Safari < 16.4 (iPhones mais antigos), então o
+     dashboard.js também marca a mensagem com a classe .mensagem-com-imagem
+     ao renderizar — não depender só do seletor :has() abaixo. */
+  .mensagem:has(.mensagem-imagem) .mensagem-conteudo,
+  .mensagem-com-imagem .mensagem-conteudo {
     padding: 4px !important;
     background: transparent !important;
     border: none !important;

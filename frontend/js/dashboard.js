@@ -793,6 +793,9 @@ function adicionarMensagemNaTela(mensagem) {
     ? "mensagem nota-interna"
     : `mensagem ${mensagem.origem === "atendente" ? "atendente" : mensagem.origem === "sistema" ? "sistema" : "cliente"}`;
 
+  // Classe explícita (não depende do seletor CSS :has(), sem suporte no Safari < 16.4 / iOS antigo)
+  if (tipo === "imagem") div.classList.add("mensagem-com-imagem");
+
   const arquivoUrl  = mensagem.arquivoUrl  || "";
   const nomeArquivo = mensagem.nomeArquivo || "Arquivo enviado";
   const mimeType    = mensagem.mimeType    || "";
@@ -1125,7 +1128,16 @@ function atualizarBotoesConversa(conversa) {
   chatInput.disabled = finalizada; btnEnviar.disabled = finalizada;
   if (btnAnexar) btnAnexar.disabled = finalizada;
   if (btnTemplates) btnTemplates.disabled = finalizada;
-  chatInput.placeholder = finalizada ? "Conversa finalizada. Reabra para responder." : "Digite sua mensagem... ou / para respostas rápidas";
+  if (finalizada) {
+    chatInput.placeholder = window.innerWidth <= 480
+      ? "Conversa finalizada"
+      : "Conversa finalizada. Reabra para responder.";
+  } else if (typeof ajustarPlaceholder === "function") {
+    // mobile-patch.js define o texto certo pro tamanho de tela atual (evita quebra de linha no iPhone)
+    ajustarPlaceholder();
+  } else {
+    chatInput.placeholder = "Digite sua mensagem... ou / para respostas rápidas";
+  }
 }
 
 async function finalizarConversa() {
