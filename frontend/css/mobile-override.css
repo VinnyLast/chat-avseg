@@ -1,0 +1,195 @@
+/* =============================================================================
+   AVSEG CHAT — mobile-override.css
+   Adicione no <head> do dashboard.html APÓS todos os outros CSS
+   ============================================================================= */
+
+@media (max-width: 900px) {
+
+  /* ── HEADER DO CHAT ─────────────────────────────────────────── */
+
+  .chat-header {
+    padding: 10px 12px 8px !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    align-items: stretch !important;
+  }
+
+  /* Linha 1 — voltar + nome */
+  .chat-header-info {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding-left: 0 !important;
+  }
+
+  .btn-voltar-mobile {
+    width: 34px !important;
+    height: 34px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .avatar {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 12px !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+  }
+
+  .chat-header-text h3 {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 55vw !important;
+    line-height: 1.2 !important;
+  }
+
+  .chat-telefone {
+    font-size: 11px !important;
+    display: block !important;
+  }
+
+  .chat-atendente-info {
+    font-size: 10px !important;
+    display: block !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* Etiquetas — compactas */
+  .chat-etiquetas-row {
+    margin-top: 2px !important;
+    gap: 3px !important;
+  }
+
+  .chat-etiqueta-tag {
+    font-size: 10px !important;
+    padding: 1px 6px !important;
+  }
+
+  .btn-adicionar-etiqueta {
+    font-size: 10px !important;
+    padding: 1px 6px !important;
+  }
+
+  /* Linha 2 — TODOS os botões em uma única linha */
+  .chat-header-actions {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 5px !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    padding-bottom: 2px !important;
+  }
+
+  .chat-header-actions::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  /* Todos os botões e select — mesma altura, compactos */
+  .chat-header-actions > * {
+    flex-shrink: 0 !important;
+    height: 30px !important;
+    font-size: 11px !important;
+    padding: 0 10px !important;
+    border-radius: 8px !important;
+    white-space: nowrap !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Select de status mais estreito */
+  #chatStatus {
+    padding: 0 22px 0 8px !important;
+    min-width: 100px !important;
+    max-width: 120px !important;
+    font-size: 11px !important;
+  }
+
+  /* Transferir — mesmo tamanho dos outros, não mais linha inteira */
+  #btnTransferirConversa {
+    grid-column: unset !important;
+    width: auto !important;
+  }
+
+  /* Reabrir */
+  #btnReabrirConversa {
+    grid-column: unset !important;
+    width: auto !important;
+  }
+
+  /* ── IMAGEM DA MENSAGEM — sem borda amarela ─────────────────── */
+
+  .mensagem-imagem {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 10px !important;
+    max-width: 220px !important;
+    max-height: 260px !important;
+    object-fit: cover !important;
+  }
+
+  /* Bolha que contém imagem — sem padding extra */
+  .mensagem:has(.mensagem-imagem) .mensagem-conteudo {
+    padding: 4px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* ── INPUT — placeholder em uma linha ──────────────────────── */
+
+  #chatInput {
+    font-size: 14px !important;
+    padding: 9px 12px !important;
+    border-radius: 20px !important;
+    min-height: 38px !important;
+    max-height: 100px !important;
+  }
+
+  /* ── MENSAGENS ──────────────────────────────────────────────── */
+
+  .chat-mensagens {
+    padding: 10px 12px 14px !important;
+    gap: 6px !important;
+  }
+
+  .mensagem {
+    max-width: 84% !important;
+  }
+
+  .mensagem-conteudo {
+    font-size: 14px !important;
+    padding: 8px 11px 6px !important;
+  }
+
+  .mensagem-hora {
+    font-size: 10px !important;
+  }
+
+  /* ── INPUT CONTAINER ────────────────────────────────────────── */
+
+  .chat-input-container {
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom)) !important;
+    gap: 6px !important;
+  }
+
+  .btn-enviar {
+    width: 38px !important;
+    height: 38px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .btn-input-action {
+    width: 36px !important;
+    height: 36px !important;
+    flex-shrink: 0 !important;
+  }
+}
