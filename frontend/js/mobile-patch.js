@@ -20,6 +20,13 @@ function ajustarPlaceholder() {
 ajustarPlaceholder();
 window.addEventListener("resize", ajustarPlaceholder);
 
+// Fecha o menu "..." do header (mobile) se a tela crescer pra largura de desktop
+window.addEventListener("resize", () => {
+  if (window.innerWidth > 900 && typeof fecharMenuChatMobile === "function") {
+    fecharMenuChatMobile();
+  }
+});
+
 // Botão de configurações no header mobile da lista (aparece ao lado do logout)
 function adicionarBtnConfigMobile() {
   if (window.innerWidth > 900) return;

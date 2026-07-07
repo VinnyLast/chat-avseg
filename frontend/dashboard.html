@@ -175,6 +175,40 @@
             <button id="btnTransferirConversa" class="btn-chat-action btn-transferir" type="button">Transferir</button>
             <button id="btnReabrirConversa" class="btn-chat-action btn-reabrir" type="button" style="display:none;">Reabrir</button>
             <button id="btnToggleInfoCliente" class="btn-secondary-small" type="button" title="Informações do associado">ℹ️ Info</button>
+
+            <!-- Menu "..." — só aparece no mobile, concentra as ações acima -->
+            <button id="btnMenuChatMobile" class="btn-menu-chat-mobile" type="button" aria-label="Mais ações" title="Mais ações" aria-haspopup="true" aria-expanded="false">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+                <circle cx="12" cy="5" r="1.5"></circle>
+                <circle cx="12" cy="12" r="1.5"></circle>
+                <circle cx="12" cy="19" r="1.5"></circle>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Dropdown de ações do menu "..." (mobile) -->
+          <div id="menuChatMobile" class="menu-chat-mobile" style="display:none;">
+            <button type="button" class="menu-chat-mobile-item" data-acao="assumir" id="menuItemAssumir">
+              <span class="menu-chat-mobile-icone">✅</span> Assumir conversa
+            </button>
+            <button type="button" class="menu-chat-mobile-item" data-acao="etiqueta" id="menuItemEtiqueta">
+              <span class="menu-chat-mobile-icone">🏷️</span> Adicionar etiqueta
+            </button>
+            <button type="button" class="menu-chat-mobile-item" data-acao="transferir" id="menuItemTransferir">
+              <span class="menu-chat-mobile-icone">🔄</span> Transferir
+            </button>
+            <button type="button" class="menu-chat-mobile-item" data-acao="info" id="menuItemInfo">
+              <span class="menu-chat-mobile-icone">ℹ️</span> Informações do associado
+            </button>
+            <button type="button" class="menu-chat-mobile-item" data-acao="nota" id="menuItemNota">
+              <span class="menu-chat-mobile-icone">📝</span> Nota interna
+            </button>
+            <button type="button" class="menu-chat-mobile-item menu-chat-mobile-item-perigo" data-acao="finalizar" id="menuItemFinalizar">
+              <span class="menu-chat-mobile-icone">✅</span> Finalizar conversa
+            </button>
+            <button type="button" class="menu-chat-mobile-item" data-acao="reabrir" id="menuItemReabrir" style="display:none;">
+              <span class="menu-chat-mobile-icone">🔁</span> Reabrir conversa
+            </button>
           </div>
         </div>
 
@@ -191,7 +225,8 @@
 
         <!-- Input -->
         <div class="chat-input-container">
-          <input type="file" id="fileAnexo" style="display:none;">
+          <input type="file" id="fileAnexo" style="display:none;"
+                 accept="image/jpeg,image/png,image/gif,image/webp,.jpg,.jpeg,.png,.gif,.webp,application/pdf,.pdf,application/msword,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,application/vnd.ms-excel,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx">
 
           <button id="btnAnexar" class="btn-input-action" type="button" title="Anexar arquivo" aria-label="Anexar arquivo">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">

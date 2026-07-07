@@ -1,21 +1,97 @@
 /* =============================================================================
    AVSEG CHAT — mobile-override.css
-   Adicione no <head> do dashboard.html APÓS todos os outros CSS
+   Camada final de estilos mobile — carregado por último no <head> do
+   dashboard.html, depois de style.css / redesign.css / mobile-fix.css.
+   Redesign do header e input do chat no padrão WhatsApp.
    ============================================================================= */
+
+/* =============================================================================
+   FONTES — remove distorção/"esticamento" em navegadores mobile
+   (Android/iOS inflam o tamanho da fonte automaticamente em certos layouts —
+   "font boosting" — o que faz o texto parecer esticado/desproporcional).
+   Aplicado globalmente, não só dentro do @media, pois é uma correção segura
+   em qualquer largura de tela.
+   ============================================================================= */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+*, *::before, *::after {
+  font-stretch: normal !important;
+}
+
+body,
+.chat-mensagens,
+.mensagem-texto,
+.chat-header-text,
+.chat-input-container,
+#chatInput {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif !important;
+}
+
+/* Botão "..." e seu menu só existem no mobile — esconde no desktop, a
+   largura ampla já mostra todas as ações inline sem precisar de menu. */
+.btn-menu-chat-mobile,
+.menu-chat-mobile {
+  display: none;
+}
 
 @media (max-width: 900px) {
 
-  /* ── HEADER DO CHAT ─────────────────────────────────────────── */
+  /* ===========================================================================
+     HEADER DO CHAT — layout único em linha, estilo WhatsApp (máx. 64px)
+     =========================================================================== */
 
   .chat-header {
-    padding: 8px 10px 6px !important;
-    flex-direction: column !important;
-    gap: 4px !important;
-    align-items: stretch !important;
+    position: relative !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 6px 8px !important;
+    min-height: 56px !important;
+    max-height: 64px !important;
+    overflow: visible !important;
   }
 
-  /* Menos espaço entre nome/telefone/atendente — texto mais compacto */
+  /* Botão voltar — 40x40, circular, item normal da linha (não mais absoluto) */
+  .btn-voltar-mobile {
+    position: static !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Bloco avatar + textos — ocupa o espaço central, trunca o que não couber */
+  .chat-header-info {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding-left: 0 !important;
+  }
+
+  .avatar {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    font-size: 14px !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+  }
+
   .chat-header-text {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    min-width: 0 !important;
     line-height: 1.15 !important;
   }
 
@@ -23,155 +99,178 @@
   .chat-telefone,
   .chat-atendente-info {
     margin: 0 !important;
-  }
-
-  /* A linha de botões cola mais perto do cabeçalho */
-  .chat-header-actions {
-    margin-top: 4px !important;
-  }
-
-  /* Linha 1 — voltar + nome */
-  .chat-header-info {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
-    padding-left: 0 !important;
-  }
-
-  .btn-voltar-mobile {
-    width: 34px !important;
-    height: 34px !important;
-    flex-shrink: 0 !important;
-  }
-
-  .avatar {
-    width: 32px !important;
-    height: 32px !important;
-    font-size: 12px !important;
-    flex-shrink: 0 !important;
-    display: flex !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 48vw !important;
   }
 
   .chat-header-text h3 {
-    font-size: 14px !important;
-    font-weight: 800 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    max-width: 55vw !important;
-    line-height: 1.2 !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0 !important;
   }
 
   .chat-telefone {
+    font-size: 12px !important;
+    display: block !important;
+  }
+
+  /* Status + atendente combinados numa linha só (ex: "🟢 Em atendimento • Atendente: Admin") */
+  .chat-atendente-info {
     font-size: 11px !important;
     display: block !important;
   }
 
-  .chat-atendente-info {
-    font-size: 10px !important;
-    display: block !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+  .chat-atendente-info.com-atendente {
+    color: var(--primary) !important;
   }
 
-  /* Etiquetas — compactas */
+  /* Etiquetas saem do header compacto no mobile — ainda acessíveis pelo
+     menu "..." (Adicionar etiqueta) e pelo painel de informações do associado. */
   .chat-etiquetas-row {
-    margin-top: 2px !important;
-    gap: 3px !important;
-  }
-
-  .chat-etiqueta-tag {
-    font-size: 10px !important;
-    padding: 1px 6px !important;
-  }
-
-  .btn-adicionar-etiqueta {
-    font-size: 10px !important;
-    padding: 1px 6px !important;
-  }
-
-  /* Linha 2 — TODOS os botões em uma única linha */
-  .chat-header-actions {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    gap: 5px !important;
-    width: 100% !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important;
-    padding-bottom: 2px !important;
-  }
-
-  .chat-header-actions::-webkit-scrollbar {
     display: none !important;
   }
 
-  /* Todos os botões e select — mesma altura, compactos.
-     IMPORTANTE: não forçar "display" aqui — o JS (dashboard.js) controla
-     display:none/inline-flex nos botões Assumir/Finalizar/Transferir/Reabrir
-     conforme o status da conversa. Um "display:inline-flex !important" aqui
-     reexibia botões que deveriam estar escondidos, forçando quebra de linha. */
-  .chat-header-actions > * {
+  /* ===========================================================================
+     ÁREA DE AÇÕES DO HEADER — no mobile só sobra o badge de status + o menu "..."
+     Os botões antigos (Assumir/Finalizar/Transferir/Reabrir/Info) somem daqui:
+     as mesmas ações continuam funcionando através do menu "..." (#menuChatMobile),
+     que reaproveita exatamente as mesmas funções do dashboard.js.
+     =========================================================================== */
+
+  .chat-header-actions {
+    position: static !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: auto !important;
     flex-shrink: 0 !important;
-    height: 30px !important;
-    min-height: 30px !important;
-    max-height: 30px !important;
+    margin-top: 0 !important;
+    overflow: visible !important;
+  }
+
+  #btnAtribuir,
+  #btnFinalizarConversa,
+  #btnTransferirConversa,
+  #btnReabrirConversa,
+  #btnToggleInfoCliente {
+    display: none !important;
+  }
+
+  /* Select de status — badge pequeno e clicável */
+  #chatStatus {
+    flex-shrink: 0 !important;
+    height: 26px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+    width: auto !important;
+    min-width: 88px !important;
+    max-width: 104px !important;
+    padding: 0 16px 0 8px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    border-radius: 999px !important;
+    background: var(--yellow-soft) !important;
+    color: var(--primary) !important;
+    border: 1px solid var(--yellow-border) !important;
     box-sizing: border-box !important;
-    line-height: 1 !important;
-    font-size: 11px !important;
-    padding: 0 10px !important;
-    border-radius: 8px !important;
-    white-space: nowrap !important;
+  }
+
+  /* Botão "..." — abre o menu com todas as ações */
+  .btn-menu-chat-mobile {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    border-radius: 50% !important;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    flex-shrink: 0 !important;
+    cursor: pointer;
   }
 
-  /* SEM !important aqui de propósito: o inline style que o JS aplica
-     (display:none ou display:inline-flex, conforme o status da conversa)
-     tem que vencer. Serialização do atributo style varia entre navegadores
-     ("display:none" vs "display: none"), então um seletor de atributo não é
-     confiável — a única forma robusta é deixar a cascata normal decidir. */
-  .chat-header-actions > * {
-    display: inline-flex;
+  .btn-menu-chat-mobile:active {
+    background: var(--yellow-soft);
+    color: var(--primary);
   }
 
-  /* Select de status mais estreito */
-  #chatStatus {
-    padding: 0 22px 0 8px !important;
-    min-width: 100px !important;
-    max-width: 120px !important;
-    font-size: 11px !important;
+  /* Dropdown de ações — abaixo do header, alinhado à direita */
+  .menu-chat-mobile {
+    position: absolute !important;
+    top: calc(100% + 4px) !important;
+    right: 8px !important;
+    z-index: 300 !important;
+    min-width: 220px;
+    max-width: 86vw;
+    background: #0f0f0f;
+    border: 1px solid var(--yellow-border);
+    border-radius: 14px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65);
+    padding: 6px;
+    flex-direction: column !important;
+    gap: 2px;
   }
 
-  /* Transferir — mesmo tamanho dos outros, não mais linha inteira */
-  #btnTransferirConversa {
-    grid-column: unset !important;
-    width: auto !important;
+  .menu-chat-mobile-item {
+    /* SEM !important em "display": o dashboard.js alterna display:none/flex
+       via inline style nos itens Assumir/Finalizar/Transferir/Reabrir
+       conforme o status da conversa — um !important aqui reexibiria itens
+       que deveriam estar escondidos (mesmo problema já visto no header). */
+    display: flex;
+    align-items: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 40px !important;
+    max-height: none !important;
+    padding: 9px 12px !important;
+    border-radius: 10px !important;
+    border: none !important;
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    cursor: pointer;
   }
 
-  /* Reabrir */
-  #btnReabrirConversa {
-    grid-column: unset !important;
-    width: auto !important;
+  .menu-chat-mobile-item:active {
+    background: rgba(255, 255, 255, 0.08) !important;
   }
 
-  /* ── IMAGEM DA MENSAGEM — sem borda amarela ─────────────────── */
+  .menu-chat-mobile-item-perigo {
+    color: #ff8a8a !important;
+  }
+
+  .menu-chat-mobile-icone {
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  /* ===========================================================================
+     IMAGEM DA MENSAGEM — sem borda/fundo amarelo, só a imagem arredondada
+     =========================================================================== */
 
   .mensagem-imagem {
     border: none !important;
     box-shadow: none !important;
-    border-radius: 10px !important;
+    border-radius: 12px !important;
     max-width: 220px !important;
     max-height: 260px !important;
     object-fit: cover !important;
   }
 
-  /* Bolha que contém imagem — sem padding extra.
-     :has() não existe no Safari < 16.4 (iPhones mais antigos), então o
-     dashboard.js também marca a mensagem com a classe .mensagem-com-imagem
-     ao renderizar — não depender só do seletor :has() abaixo. */
+  /* :has() não existe no Safari < 16.4 — dashboard.js também marca a mensagem
+     com a classe .mensagem-com-imagem ao renderizar, então não dependemos só
+     do seletor abaixo. */
   .mensagem:has(.mensagem-imagem) .mensagem-conteudo,
   .mensagem-com-imagem .mensagem-conteudo {
     padding: 4px !important;
@@ -180,17 +279,51 @@
     box-shadow: none !important;
   }
 
-  /* ── INPUT — placeholder em uma linha ──────────────────────── */
+  /* ===========================================================================
+     BOLHAS DE MENSAGEM — cores e cantos estilo WhatsApp
+     =========================================================================== */
 
-  #chatInput {
-    font-size: 14px !important;
-    padding: 9px 12px !important;
-    border-radius: 20px !important;
-    min-height: 38px !important;
-    max-height: 100px !important;
+  .mensagem.atendente .mensagem-conteudo {
+    background: #f5c400 !important;
+    color: #000000 !important;
+    border-radius: 14px 4px 14px 14px !important;
   }
 
-  /* ── MENSAGENS ──────────────────────────────────────────────── */
+  .mensagem.cliente .mensagem-conteudo {
+    background: #1e1e1e !important;
+    color: #ffffff !important;
+    border-radius: 4px 14px 14px 14px !important;
+  }
+
+  .mensagem-hora {
+    font-size: 10px !important;
+    opacity: 0.6 !important;
+    text-align: right !important;
+    display: block !important;
+  }
+
+  /* Nota interna — mesmo visual do desktop, sem distorcer a fonte */
+  .mensagem.nota-interna .mensagem-conteudo {
+    background: rgba(245, 196, 0, 0.12) !important;
+    border-left: 3px solid var(--primary) !important;
+    border-radius: 8px !important;
+  }
+
+  .mensagem.nota-interna .mensagem-texto {
+    font-size: 14px !important;
+    font-weight: 400 !important;
+  }
+
+  /* Separador de data — pill compacta e centralizada */
+  .mensagem-data-separador {
+    font-size: 11px !important;
+    padding: 3px 12px !important;
+    border-radius: 999px !important;
+  }
+
+  /* ===========================================================================
+     MENSAGENS — área de conteúdo
+     =========================================================================== */
 
   .chat-mensagens {
     padding: 10px 12px 14px !important;
@@ -202,19 +335,41 @@
   }
 
   .mensagem-conteudo {
-    font-size: 14px !important;
+    font-size: 15px !important;
+    font-weight: 400 !important;
     padding: 8px 11px 6px !important;
   }
 
-  .mensagem-hora {
-    font-size: 10px !important;
-  }
-
-  /* ── INPUT CONTAINER ────────────────────────────────────────── */
+  /* ===========================================================================
+     INPUT DO CHAT — estilo WhatsApp: [anexo] [texto] [templates] [enviar]
+     Sem alterar a ordem no HTML/DOM (preserva os event listeners já existentes
+     no dashboard.js) — a ordem visual é feita só com "order" do flexbox.
+     =========================================================================== */
 
   .chat-input-container {
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom)) !important;
     gap: 6px !important;
+    align-items: flex-end !important;
+  }
+
+  #btnAnexar { order: 1 !important; }
+  #chatInput { order: 2 !important; }
+  #btnTemplates { order: 3 !important; }
+  #btnEnviar { order: 4 !important; }
+
+  /* Nota interna sai da barra de input no mobile — some 📝 "Nota interna" no
+     menu "..." do header, deixando o input só com anexo/texto/templates/enviar. */
+  #btnNotaInterna {
+    display: none !important;
+  }
+
+  #chatInput {
+    font-size: 15px !important;
+    font-weight: 400 !important;
+    padding: 9px 14px !important;
+    border-radius: 20px !important;
+    min-height: 38px !important;
+    max-height: 100px !important;
   }
 
   .btn-enviar {

@@ -304,12 +304,16 @@ function renderizarEtiquetasNoChat(conversa) {
   container.innerHTML = tagsHTML + btnAdicionar;
 }
 
-// Dropdown de seleção
-function abrirDropdownEtiquetas() {
+// Dropdown de seleção — recebe o elemento que disparou a abertura (botão inline
+// no desktop, ou o item "Adicionar etiqueta" do menu "..." no mobile) e
+// posiciona o dropdown com position:fixed a partir dele. Assim funciona igual
+// nos dois casos, sem depender de um wrapper ancestral com position:relative
+// (que no mobile fica escondido dentro do menu "...").
+function abrirDropdownEtiquetas(triggerEl) {
   fecharDropdownEtiquetas();
 
-  const wrapper = document.getElementById("etiquetasWrapperBtn");
-  if (!wrapper || !conversaAtual) return;
+  const trigger = triggerEl || document.getElementById("btnAdicionarEtiqueta");
+  if (!trigger || !conversaAtual) return;
 
   const idsAplicados = Array.isArray(conversaAtual.etiquetas) ? conversaAtual.etiquetas : [];
 
@@ -330,7 +334,16 @@ function abrirDropdownEtiquetas() {
   dropdown.className = "etiquetas-dropdown";
   dropdown.id = "etiquetasDropdown";
   dropdown.innerHTML = itens;
-  wrapper.appendChild(dropdown);
+  document.body.appendChild(dropdown);
+
+  const rect = trigger.getBoundingClientRect();
+  dropdown.style.position = "fixed";
+  dropdown.style.top = `${rect.bottom + 6}px`;
+  const larguraMinima = 220;
+  let left = rect.left;
+  const maxLeft = window.innerWidth - larguraMinima - 10;
+  if (left > maxLeft) left = Math.max(10, maxLeft);
+  dropdown.style.left = `${left}px`;
 }
 
 function fecharDropdownEtiquetas() {
@@ -679,6 +692,7 @@ async function abrirConversa(conversaId) {
 
   if (modoNotaInterna) alternarModoNota();
   fecharPainelClienteInfo();
+  fecharMenuChatMobile();
 
   chatVazio.style.display = "none";
   chatAtivo.style.display = "flex";
@@ -844,9 +858,23 @@ function formatarTamanhoArquivo(bytes = 0) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Somente imagens e documentos — sem áudio/vídeo (política da Meta para
+// mensagens de voz/mídia iniciadas pela empresa).
+const EXTENSOES_ANEXO_PERMITIDAS = ["jpg", "jpeg", "png", "gif", "webp", "pdf", "doc", "docx", "xls", "xlsx"];
+
+function extensaoPermitida(nomeArquivo = "") {
+  const ext = nomeArquivo.split(".").pop()?.toLowerCase() || "";
+  return EXTENSOES_ANEXO_PERMITIDAS.includes(ext);
+}
+
 function selecionarArquivo(e) {
   const file = e.target.files?.[0];
   if (!file) return;
+  if (!extensaoPermitida(file.name)) {
+    alert("Tipo de arquivo não permitido. Envie apenas imagens (jpg, png, gif, webp) ou documentos (pdf, doc, docx, xls, xlsx).");
+    fileAnexo.value = "";
+    return;
+  }
   if (file.size > 25 * 1024 * 1024) { alert("Arquivo muito grande. Limite: 25MB."); fileAnexo.value = ""; return; }
   arquivoSelecionado = file;
   renderizarPreviewAnexo();
@@ -977,6 +1005,46 @@ async function enviarNotaInterna(texto) {
 }
 
 // =============================================================================
+// MENU "..." DO HEADER (mobile) — concentra Assumir/Etiqueta/Transferir/
+// Info/Nota/Finalizar/Reabrir, que no mobile não cabem expostos no header.
+// =============================================================================
+
+function abrirMenuChatMobile() {
+  const menu = document.getElementById("menuChatMobile");
+  if (!menu) return;
+  menu.style.display = "flex";
+  document.getElementById("btnMenuChatMobile")?.setAttribute("aria-expanded", "true");
+}
+
+function fecharMenuChatMobile() {
+  const menu = document.getElementById("menuChatMobile");
+  if (menu) menu.style.display = "none";
+  document.getElementById("btnMenuChatMobile")?.setAttribute("aria-expanded", "false");
+}
+
+function alternarMenuChatMobile() {
+  const menu = document.getElementById("menuChatMobile");
+  if (!menu) return;
+  if (menu.style.display === "flex") fecharMenuChatMobile();
+  else abrirMenuChatMobile();
+}
+
+function executarAcaoMenuChatMobile(acao, itemEl) {
+  // Executa a ação antes de fechar o menu — abrirDropdownEtiquetas() precisa
+  // medir a posição do item enquanto ele ainda está visível.
+  switch (acao) {
+    case "assumir": assumirConversa(); break;
+    case "etiqueta": abrirDropdownEtiquetas(itemEl); break;
+    case "transferir": abrirModalTransferir(); break;
+    case "info": abrirPainelClienteInfo(); break;
+    case "nota": alternarModoNota(); break;
+    case "finalizar": finalizarConversa(); break;
+    case "reabrir": reabrirConversa(); break;
+  }
+  fecharMenuChatMobile();
+}
+
+// =============================================================================
 // TEMPLATES RÁPIDOS
 // =============================================================================
 
@@ -1091,10 +1159,17 @@ async function assumirConversa() {
   } catch (_) { alert("Erro de conexão ao assumir conversa."); }
 }
 
+function rotuloStatusConversa(conversa) {
+  if (conversa?.status === "finalizada") return "⚪ Finalizada";
+  if (conversa?.status === "em_atendimento") return "🟢 Em atendimento";
+  return "🟡 Aguardando";
+}
+
 function atualizarInfoAtendente(conversa) {
   if (!chatAtendenteInfo) return;
-  if (conversa?.atendenteNome) { chatAtendenteInfo.textContent = `Atendente: ${conversa.atendenteNome}`; chatAtendenteInfo.classList.add("com-atendente"); }
-  else { chatAtendenteInfo.textContent = "Sem atendente responsável"; chatAtendenteInfo.classList.remove("com-atendente"); }
+  const status = rotuloStatusConversa(conversa);
+  if (conversa?.atendenteNome) { chatAtendenteInfo.textContent = `${status} • Atendente: ${conversa.atendenteNome}`; chatAtendenteInfo.classList.add("com-atendente"); }
+  else { chatAtendenteInfo.textContent = `${status} • Sem atendente`; chatAtendenteInfo.classList.remove("com-atendente"); }
 
   // Banner de humano pendente
   const bannerExistente = document.getElementById("chatHumanoBanner");
@@ -1125,6 +1200,15 @@ function atualizarBotoesConversa(conversa) {
   if (btnReabrirConversa) btnReabrirConversa.style.display = finalizada ? "inline-flex" : "none";
   if (btnAtribuir) btnAtribuir.style.display = finalizada ? "none" : "inline-flex";
   if (btnTransferirConversa) btnTransferirConversa.style.display = finalizada ? "none" : "inline-flex";
+
+  // Espelha a visibilidade nos itens do menu "..." (mobile)
+  document.getElementById("menuItemFinalizar")?.style.setProperty("display", finalizada ? "none" : "flex");
+  document.getElementById("menuItemReabrir")?.style.setProperty("display", finalizada ? "flex" : "none");
+  document.getElementById("menuItemAssumir")?.style.setProperty("display", finalizada ? "none" : "flex");
+  document.getElementById("menuItemTransferir")?.style.setProperty("display", finalizada ? "none" : "flex");
+  document.getElementById("menuItemEtiqueta")?.style.setProperty("display", finalizada ? "none" : "flex");
+  document.getElementById("menuItemNota")?.style.setProperty("display", finalizada ? "none" : "flex");
+
   chatInput.disabled = finalizada; btnEnviar.disabled = finalizada;
   if (btnAnexar) btnAnexar.disabled = finalizada;
   if (btnTemplates) btnTemplates.disabled = finalizada;
@@ -1367,6 +1451,16 @@ function configurarEventos() {
   fileAnexo?.addEventListener("change", selecionarArquivo);
   btnNotaInterna?.addEventListener("click", alternarModoNota);
 
+  document.getElementById("btnMenuChatMobile")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    alternarMenuChatMobile();
+  });
+
+  document.getElementById("menuChatMobile")?.addEventListener("click", (e) => {
+    const item = e.target.closest(".menu-chat-mobile-item");
+    if (item) executarAcaoMenuChatMobile(item.dataset.acao, item);
+  });
+
   chatMensagens.addEventListener("click", (e) => {
     if (e.target.closest("#btnCarregarAnteriores")) carregarMensagensAnteriores();
   });
@@ -1378,9 +1472,15 @@ function configurarEventos() {
     if (item) { fecharPainelClienteInfo(); abrirConversa(item.dataset.conversaId); }
   });
 
-  // Usa mousedown para não conflitar com o click global que fecha o painel
-  btnTemplates?.addEventListener("mousedown", (e) => {
-    e.preventDefault(); // evita blur no input
+  // "mousedown"/"touchstart" só para não perder o foco do input (evita fechar o teclado
+  // no mobile). A ação em si fica em "click", que é o único evento garantido em
+  // touch e mouse — "mousedown" sozinho não disparava no toque em vários navegadores
+  // mobile, deixando o botão de respostas rápidas sem reação no celular.
+  const evitarBlurInput = (e) => e.preventDefault();
+  btnTemplates?.addEventListener("mousedown", evitarBlurInput);
+  btnTemplates?.addEventListener("touchstart", evitarBlurInput, { passive: false });
+
+  btnTemplates?.addEventListener("click", () => {
     if (templatesRapidos?.style.display === "block") {
       esconderTemplatesRapidos();
     } else {
@@ -1418,21 +1518,25 @@ function configurarEventos() {
     renderizarConversas();
   });
 
-  // Botão adicionar etiqueta no chat
+  // Botão adicionar/remover etiqueta no chat (desktop)
   document.getElementById("chatEtiquetasRow")?.addEventListener("click", (e) => {
     const btnAdd = e.target.closest("#btnAdicionarEtiqueta");
-    if (btnAdd) { abrirDropdownEtiquetas(); return; }
+    if (btnAdd) { abrirDropdownEtiquetas(btnAdd); return; }
 
     const btnRemover = e.target.closest(".chat-etiqueta-remover");
     if (btnRemover) { removerEtiqueta(btnRemover.dataset.etiquetaId); return; }
-
-    const dropdownItem = e.target.closest(".etiquetas-dropdown-item");
-    if (dropdownItem) { aplicarEtiqueta(dropdownItem.dataset.id); return; }
   });
 
   // Fechar dropdown ao clicar fora
   document.addEventListener("click", (e) => {
-    if (!e.target.closest("#etiquetasWrapperBtn") && !e.target.closest("#etiquetasDropdown")) fecharDropdownEtiquetas();
+    // O dropdown de etiquetas é anexado ao <body> (position:fixed), não mais
+    // dentro de #chatEtiquetasRow — por isso os itens são tratados aqui.
+    const dropdownItem = e.target.closest(".etiquetas-dropdown-item");
+    if (dropdownItem) { aplicarEtiqueta(dropdownItem.dataset.id); return; }
+
+    if (!e.target.closest("#etiquetasWrapperBtn") && !e.target.closest("#etiquetasDropdown") && !e.target.closest("#menuChatMobile")) fecharDropdownEtiquetas();
+
+    if (!e.target.closest("#menuChatMobile") && !e.target.closest("#btnMenuChatMobile")) fecharMenuChatMobile();
 
     const imagemMensagem = e.target.closest(".mensagem-imagem");
     if (imagemMensagem) { abrirModalImagem(imagemMensagem.dataset.url); return; }
@@ -1479,7 +1583,7 @@ function configurarEventos() {
   document.getElementById("modalEtiquetas")?.addEventListener("click", (e) => { if (e.target === document.getElementById("modalEtiquetas")) fecharModalEtiquetas(); });
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { fecharModalImagem(); fecharModalAtendentes(); fecharModalTransferir(); fecharModalEtiquetas(); fecharDropdownEtiquetas(); fecharPainelClienteInfo(); }
+    if (e.key === "Escape") { fecharModalImagem(); fecharModalAtendentes(); fecharModalTransferir(); fecharModalEtiquetas(); fecharDropdownEtiquetas(); fecharPainelClienteInfo(); fecharMenuChatMobile(); }
 
     if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "k") {
       e.preventDefault();
@@ -1510,6 +1614,7 @@ async function iniciar() {
   aplicarTema(document.documentElement.getAttribute("data-theme") || "dark");
   await verificarAutenticacao();
   await carregarEtiquetas();
+  await carregarTemplates();
   configurarEventos();
   configurarSocket();
   configurarAvisoSaida();
