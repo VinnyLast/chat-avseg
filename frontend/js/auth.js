@@ -104,7 +104,7 @@ async function verificarLoginExistente() {
     });
 
     if (resposta.ok) {
-      window.location.href = "dashboard.html";
+      window.location.href = "/dashboard";
     } else {
       localStorage.removeItem("avseg_token");
       localStorage.removeItem("avseg_usuario");
@@ -148,7 +148,7 @@ loginForm?.addEventListener("submit", async (e) => {
     localStorage.setItem("avseg_token", dados.token);
     localStorage.setItem("avseg_usuario", JSON.stringify(dados.usuario));
 
-    window.location.href = "dashboard.html";
+    window.location.href = "/dashboard";
   } catch (erro) {
     console.error("Erro no login:", erro);
     mostrarErro("Erro de conexão com o servidor.");

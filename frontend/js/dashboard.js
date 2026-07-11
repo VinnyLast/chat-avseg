@@ -105,7 +105,7 @@ function authHeadersSemJson() {
 function sair() {
   localStorage.removeItem("avseg_token");
   localStorage.removeItem("avseg_usuario");
-  window.location.href = "index.html";
+  window.location.href = "/";
 }
 
 function formatarHora(dataISO) {
@@ -490,7 +490,7 @@ async function excluirEtiqueta(id, nome) {
 // =============================================================================
 
 async function verificarAutenticacao() {
-  if (!token) { window.location.href = "index.html"; return; }
+  if (!token) { window.location.href = "/"; return; }
   try {
     const resposta = await fetch(`${API_URL}/api/auth/verificar`, { headers: authHeaders() });
     if (!resposta.ok) { sair(); return; }

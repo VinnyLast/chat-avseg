@@ -35,7 +35,7 @@ function adicionarBtnConfigMobile() {
 
   const btn = document.createElement("a");
   btn.id = "btnConfigMobile";
-  btn.href = "configuracoes.html";
+  btn.href = "/configuracoes";
   btn.title = "Configurações";
   btn.setAttribute("aria-label", "Configurações");
   btn.style.cssText = `

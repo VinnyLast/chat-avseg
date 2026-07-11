@@ -51,7 +51,7 @@
       </form>
 
       <div class="login-footer">
-        <p><a href="index.html" style="color:var(--primary);text-decoration:none;">← Voltar para o login</a></p>
+        <p><a href="/" style="color:var(--primary);text-decoration:none;">← Voltar para o login</a></p>
       </div>
     </div>
   </div>
@@ -113,7 +113,7 @@
         sucessoEl.style.display = "block";
         form.reset();
         form.style.display = "none";
-        setTimeout(() => { window.location.href = "index.html"; }, 2500);
+        setTimeout(() => { window.location.href = "/"; }, 2500);
       } catch (_) {
         erroEl.textContent = "Erro de conexão com o servidor.";
         erroEl.style.display = "block";

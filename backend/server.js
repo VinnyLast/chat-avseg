@@ -48,7 +48,15 @@ app.use(cors());
 app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 app.use("/uploads", express.static(UPLOADS_PATH));
-app.use(express.static(path.join(__dirname, "../frontend")));
+
+// URLs limpas (sem .html) — o arquivo .html continua acessível pelo nome
+// completo também, isso só evita expor a extensão na barra de endereço.
+const FRONTEND_PATH = path.join(__dirname, "../frontend");
+app.get("/dashboard", (req, res) => res.sendFile(path.join(FRONTEND_PATH, "dashboard.html")));
+app.get("/configuracoes", (req, res) => res.sendFile(path.join(FRONTEND_PATH, "configuracoes.html")));
+app.get("/resetar-senha", (req, res) => res.sendFile(path.join(FRONTEND_PATH, "resetar-senha.html")));
+
+app.use(express.static(FRONTEND_PATH));
 
 // =============================================================================
 // UPLOAD DE ARQUIVOS
@@ -375,7 +383,7 @@ app.post("/api/auth/esqueci-senha", async (req, res) => {
     const expira = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h
     db.prepare("UPDATE usuarios SET resetToken = ?, resetTokenExpira = ? WHERE id = ?").run(token, expira, usuario.id);
 
-    const link = `${PUBLIC_BASE_URL || baseUrlReq(req)}/resetar-senha.html?token=${token}`;
+    const link = `${PUBLIC_BASE_URL || baseUrlReq(req)}/resetar-senha?token=${token}`;
     await enviarEmailRecuperacaoSenha(usuario.email, usuario.nome, link);
   }
 
