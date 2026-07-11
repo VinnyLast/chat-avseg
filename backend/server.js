@@ -8,8 +8,10 @@ const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const multer = require("multer");
 const db = require("./database/db");
+const { enviarEmailRecuperacaoSenha } = require("./emailer");
 
 const app = express();
 const server = http.createServer(app);
@@ -357,6 +359,43 @@ app.get("/api/auth/verificar", autenticar, (req, res) => {
   const usuario = db.prepare("SELECT * FROM usuarios WHERE id = ? AND ativo = 1").get(req.usuario.id);
   if (!usuario) return res.status(401).json({ erro: "Usuário não encontrado" });
   res.json({ usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, role: usuario.role } });
+});
+
+// Solicitar recuperação de senha — sempre responde com a mesma mensagem
+// genérica (exista ou não o email), pra não revelar quais emails têm conta.
+app.post("/api/auth/esqueci-senha", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ erro: "Informe o email." });
+
+  const mensagemGenerica = "Se esse email estiver cadastrado, enviamos um link de redefinição de senha.";
+
+  const usuario = db.prepare("SELECT * FROM usuarios WHERE email = ? AND ativo = 1").get(email.trim());
+  if (usuario) {
+    const token = crypto.randomBytes(32).toString("hex");
+    const expira = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h
+    db.prepare("UPDATE usuarios SET resetToken = ?, resetTokenExpira = ? WHERE id = ?").run(token, expira, usuario.id);
+
+    const link = `${PUBLIC_BASE_URL || baseUrlReq(req)}/resetar-senha.html?token=${token}`;
+    await enviarEmailRecuperacaoSenha(usuario.email, usuario.nome, link);
+  }
+
+  res.json({ ok: true, mensagem: mensagemGenerica });
+});
+
+// Redefinir senha usando o token recebido por email
+app.post("/api/auth/resetar-senha", (req, res) => {
+  const { token, novaSenha } = req.body;
+  if (!token || !novaSenha) return res.status(400).json({ erro: "Dados incompletos." });
+  if (novaSenha.length < 6) return res.status(400).json({ erro: "A senha precisa ter pelo menos 6 caracteres." });
+
+  const usuario = db.prepare("SELECT * FROM usuarios WHERE resetToken = ? AND ativo = 1").get(token);
+  if (!usuario || !usuario.resetTokenExpira || new Date(usuario.resetTokenExpira) < new Date()) {
+    return res.status(400).json({ erro: "Link inválido ou expirado. Solicite a recuperação novamente." });
+  }
+
+  const senhaHash = bcrypt.hashSync(novaSenha, 10);
+  db.prepare("UPDATE usuarios SET senha = ?, resetToken = NULL, resetTokenExpira = NULL WHERE id = ?").run(senhaHash, usuario.id);
+  res.json({ ok: true, mensagem: "Senha redefinida com sucesso. Você já pode fazer login." });
 });
 
 // =============================================================================

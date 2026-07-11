@@ -26,7 +26,9 @@ db.exec(`
     role TEXT NOT NULL DEFAULT 'atendente',
     ativo INTEGER NOT NULL DEFAULT 1,
     criadoEm TEXT NOT NULL,
-    excluidoEm TEXT
+    excluidoEm TEXT,
+    resetToken TEXT,
+    resetTokenExpira TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
 
@@ -102,5 +104,11 @@ db.exec(`
     atualizadoEm TEXT
   );
 `);
+
+// Migração leve pra bancos criados antes da coluna existir — CREATE TABLE
+// IF NOT EXISTS não adiciona coluna em tabela que já existe.
+const colunasUsuarios = db.prepare("PRAGMA table_info(usuarios)").all().map((c) => c.name);
+if (!colunasUsuarios.includes("resetToken")) db.exec("ALTER TABLE usuarios ADD COLUMN resetToken TEXT");
+if (!colunasUsuarios.includes("resetTokenExpira")) db.exec("ALTER TABLE usuarios ADD COLUMN resetTokenExpira TEXT");
 
 module.exports = db;

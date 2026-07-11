@@ -38,14 +38,23 @@
 
         <div class="form-group">
           <label for="senha">Senha</label>
-          <input
-            type="password"
-            id="senha"
-            name="senha"
-            placeholder="••••••••"
-            required
-            autocomplete="current-password"
-          >
+          <div class="senha-wrapper">
+            <input
+              type="password"
+              id="senha"
+              name="senha"
+              placeholder="••••••••"
+              required
+              autocomplete="current-password"
+            >
+            <button type="button" class="btn-toggle-senha" data-target="senha" aria-label="Mostrar senha">
+              <svg class="icone-olho" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="login-esqueci-senha">
+          <a href="#" id="linkEsqueciSenha">Esqueci minha senha</a>
         </div>
 
         <div id="erro" class="erro-mensagem" style="display: none;"></div>
@@ -53,6 +62,18 @@
         <button type="submit" class="btn-primary" id="btnLogin">
           Entrar
         </button>
+      </form>
+
+      <form id="formEsqueciSenha" class="login-form" style="display:none;">
+        <div class="form-group">
+          <label for="emailRecuperacao">Informe seu email cadastrado</label>
+          <input type="email" id="emailRecuperacao" placeholder="seu@email.com" required autocomplete="email">
+        </div>
+        <p class="login-esqueci-info">Vamos enviar um link de redefinição de senha para esse email, se ele estiver cadastrado.</p>
+        <div id="erroRecuperacao" class="erro-mensagem" style="display: none;"></div>
+        <div id="sucessoRecuperacao" class="sucesso-mensagem" style="display: none;"></div>
+        <button type="submit" class="btn-primary" id="btnEnviarRecuperacao">Enviar link de recuperação</button>
+        <button type="button" class="btn-voltar-login" id="btnVoltarLogin">← Voltar para o login</button>
       </form>
 
       <div class="login-footer">

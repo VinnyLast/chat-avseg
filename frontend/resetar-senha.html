@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AVSEG Chat - Redefinir senha</title>
+  <script>
+    (function () {
+      var tema = localStorage.getItem("avseg_tema") || "dark";
+      document.documentElement.setAttribute("data-theme", tema);
+    })();
+  </script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-page">
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <h1 class="login-brand-vertical">
+          <img src="assets/logo-avseg.png" alt="AVSEG" class="login-logo-grande">
+          <span>AVSEG Chat</span>
+        </h1>
+        <p>Redefinir senha</p>
+      </div>
+
+      <form id="formResetarSenha" class="login-form">
+        <div class="form-group">
+          <label for="novaSenhaReset">Nova senha</label>
+          <div class="senha-wrapper">
+            <input type="password" id="novaSenhaReset" placeholder="••••••••" required autocomplete="new-password" minlength="6">
+            <button type="button" class="btn-toggle-senha" data-target="novaSenhaReset" aria-label="Mostrar senha">
+              <svg class="icone-olho" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirmarSenhaReset">Confirmar nova senha</label>
+          <div class="senha-wrapper">
+            <input type="password" id="confirmarSenhaReset" placeholder="••••••••" required autocomplete="new-password" minlength="6">
+            <button type="button" class="btn-toggle-senha" data-target="confirmarSenhaReset" aria-label="Mostrar senha">
+              <svg class="icone-olho" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="erroReset" class="erro-mensagem" style="display: none;"></div>
+        <div id="sucessoReset" class="sucesso-mensagem" style="display: none;"></div>
+
+        <button type="submit" class="btn-primary" id="btnRedefinir">Redefinir senha</button>
+      </form>
+
+      <div class="login-footer">
+        <p><a href="index.html" style="color:var(--primary);text-decoration:none;">← Voltar para o login</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = window.location.origin;
+
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".btn-toggle-senha");
+      if (!btn) return;
+      const input = document.getElementById(btn.dataset.target);
+      if (!input) return;
+      input.type = input.type === "text" ? "password" : "text";
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    const form = document.getElementById("formResetarSenha");
+    const erroEl = document.getElementById("erroReset");
+    const sucessoEl = document.getElementById("sucessoReset");
+    const btnRedefinir = document.getElementById("btnRedefinir");
+
+    if (!token) {
+      erroEl.textContent = "Link inválido. Solicite a recuperação de senha novamente na tela de login.";
+      erroEl.style.display = "block";
+      form.style.display = "none";
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      erroEl.style.display = "none";
+      sucessoEl.style.display = "none";
+
+      const novaSenha = document.getElementById("novaSenhaReset").value;
+      const confirmar = document.getElementById("confirmarSenhaReset").value;
+
+      if (novaSenha !== confirmar) {
+        erroEl.textContent = "As senhas não coincidem.";
+        erroEl.style.display = "block";
+        return;
+      }
+
+      btnRedefinir.disabled = true;
+      btnRedefinir.textContent = "Redefinindo...";
+
+      try {
+        const resposta = await fetch(`${API_URL}/api/auth/resetar-senha`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, novaSenha }),
+        });
+        const dados = await resposta.json();
+        if (!resposta.ok) {
+          erroEl.textContent = dados.erro || "Erro ao redefinir senha.";
+          erroEl.style.display = "block";
+          return;
+        }
+        sucessoEl.textContent = dados.mensagem || "Senha redefinida com sucesso.";
+        sucessoEl.style.display = "block";
+        form.reset();
+        form.style.display = "none";
+        setTimeout(() => { window.location.href = "index.html"; }, 2500);
+      } catch (_) {
+        erroEl.textContent = "Erro de conexão com o servidor.";
+        erroEl.style.display = "block";
+      } finally {
+        btnRedefinir.disabled = false;
+        btnRedefinir.textContent = "Redefinir senha";
+      }
+    });
+  </script>
+</body>
+</html>

@@ -3788,3 +3788,91 @@ body.modal-aberto {
 @media (max-width: 900px) {
   .painel-cliente-info { width: 100%; }
 }
+
+/* =============================================================================
+   TOGGLE MOSTRAR/OCULTAR SENHA + ESQUECI MINHA SENHA
+   ============================================================================= */
+.senha-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.senha-wrapper input {
+  width: 100%;
+  padding-right: 42px;
+}
+
+.btn-toggle-senha {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.btn-toggle-senha:hover {
+  color: var(--text-primary);
+  background: var(--bg-light);
+}
+
+.btn-toggle-senha .icone-olho {
+  display: block;
+}
+
+.login-esqueci-senha {
+  text-align: right;
+  margin-top: -10px;
+}
+
+.login-esqueci-senha a,
+.btn-voltar-login {
+  font-size: 13px;
+  color: var(--primary);
+  text-decoration: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.login-esqueci-senha a:hover,
+.btn-voltar-login:hover {
+  text-decoration: underline;
+}
+
+.btn-voltar-login {
+  display: block;
+  text-align: center;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.login-esqueci-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: -8px 0 0;
+}
+
+.sucesso-mensagem {
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+[data-theme="light"] .sucesso-mensagem {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
