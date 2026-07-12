@@ -576,7 +576,12 @@ function separarConversas() {
   }
 
   const humanos = lista.filter(estaHumanoPendente).sort((a, b) => dataOrdem(b) - dataOrdem(a));
-  const normais = lista.filter((c) => !estaHumanoPendente(c)).sort((a, b) => dataOrdem(b) - dataOrdem(a));
+  const normais = lista.filter((c) => !estaHumanoPendente(c)).sort((a, b) => {
+    const aFinalizada = a.status === "finalizada" ? 1 : 0;
+    const bFinalizada = b.status === "finalizada" ? 1 : 0;
+    if (aFinalizada !== bFinalizada) return aFinalizada - bFinalizada;
+    return dataOrdem(b) - dataOrdem(a);
+  });
   return { humanos, normais };
 }
 
@@ -619,7 +624,7 @@ function _renderizarItemConversa(conversa) {
     </div>
     <div class="conversa-info">
       <div class="conversa-header">
-        <h4 class="conversa-nome">${escaparHTML(conversa.clienteNome || "Cliente")}</h4>
+        <h4 class="conversa-nome">${escaparHTML(conversa.clienteNome || "Associado")}</h4>
         <span class="conversa-hora">${formatarHora(conversa.ultimaMensagemData)}</span>
       </div>
       <div class="conversa-footer">
@@ -698,7 +703,7 @@ async function abrirConversa(conversaId) {
   chatAtivo.style.display = "flex";
 
   chatClienteInicial.textContent = primeiraLetra(conversa.clienteNome);
-  chatClienteNome.textContent = conversa.clienteNome || "Cliente";
+  chatClienteNome.textContent = conversa.clienteNome || "Associado";
   chatClienteTelefone.textContent = formatarTelefone(conversa.telefone);
   chatStatus.value = conversa.status || "aguardando";
   atualizarInfoAtendente(conversa);
@@ -1040,6 +1045,7 @@ function executarAcaoMenuChatMobile(acao, itemEl) {
     case "nota": alternarModoNota(); break;
     case "finalizar": finalizarConversa(); break;
     case "reabrir": reabrirConversa(); break;
+    case "excluir": excluirConversa(); break;
   }
   fecharMenuChatMobile();
 }
@@ -1183,7 +1189,7 @@ function atualizarInfoAtendente(conversa) {
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="7" r="4"></circle>
       </svg>
-      Cliente aguardando atendimento humano — assuma a conversa para iniciar
+      Associado aguardando atendimento humano — assuma a conversa para iniciar
     `;
     // Insere após o header do chat
     const chatHeader = document.querySelector(".chat-header");
@@ -1200,6 +1206,10 @@ function atualizarBotoesConversa(conversa) {
   if (btnReabrirConversa) btnReabrirConversa.style.display = finalizada ? "inline-flex" : "none";
   if (btnAtribuir) btnAtribuir.style.display = finalizada ? "none" : "inline-flex";
   if (btnTransferirConversa) btnTransferirConversa.style.display = finalizada ? "none" : "inline-flex";
+
+  const ehAdmin = usuario?.role === "admin";
+  document.getElementById("btnExcluirConversa")?.style.setProperty("display", ehAdmin ? "inline-flex" : "none");
+  document.getElementById("menuItemExcluir")?.style.setProperty("display", ehAdmin ? "flex" : "none");
 
   // Espelha a visibilidade nos itens do menu "..." (mobile)
   document.getElementById("menuItemFinalizar")?.style.setProperty("display", finalizada ? "none" : "flex");
@@ -1232,6 +1242,31 @@ async function finalizarConversa() {
 async function reabrirConversa() {
   if (!conversaAtual) return;
   await atualizarStatus("aguardando");
+}
+
+async function excluirConversa() {
+  if (!conversaAtual) return;
+  if (!confirm(`Tem certeza que deseja excluir a conversa com ${conversaAtual.clienteNome || "este associado"}?\n\nEssa ação não pode ser desfeita.`)) return;
+
+  try {
+    const resposta = await fetch(`${API_URL}/api/conversas/${conversaAtual.id}`, { method: "DELETE", headers: authHeaders() });
+    const dados = await resposta.json();
+    if (!resposta.ok) { alert(dados.erro || "Erro ao excluir conversa."); return; }
+    removerConversaDaLista(conversaAtual.id);
+  } catch (_) {
+    alert("Erro ao excluir conversa.");
+  }
+}
+
+function removerConversaDaLista(conversaId) {
+  conversas = conversas.filter((c) => c.id !== conversaId);
+  if (conversaAtual?.id === conversaId) {
+    conversaAtual = null;
+    chatVazio.style.display = "flex";
+    chatAtivo.style.display = "none";
+  }
+  renderizarConversas();
+  atualizarEstatisticas();
 }
 
 function ajustarAlturaTextarea() {
@@ -1408,6 +1443,11 @@ function configurarSocket() {
     renderizarConversas(); atualizarEstatisticas(); _recalcularBadge();
   });
 
+  socket.on("conversa_excluida", ({ conversaId }) => {
+    removerConversaDaLista(conversaId);
+    _recalcularBadge();
+  });
+
   socket.on("nova_mensagem", async ({ conversaId, mensagem }) => {
     await carregarConversas();
     if (conversaAtual?.id === conversaId) {
@@ -1517,6 +1557,7 @@ function configurarEventos() {
   btnFinalizarConversa?.addEventListener("click", finalizarConversa);
   btnReabrirConversa?.addEventListener("click", reabrirConversa);
   btnTransferirConversa?.addEventListener("click", abrirModalTransferir);
+  document.getElementById("btnExcluirConversa")?.addEventListener("click", excluirConversa);
 
   searchConversas.addEventListener("input", (e) => { buscaAtual = e.target.value; renderizarConversas(); });
 

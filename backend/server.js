@@ -306,7 +306,7 @@ const TEMPLATES_PADRAO = [
   { id: '3', ordem: 3, atalho: '/verificar', titulo: 'Verificando',           texto: 'Vou verificar para você.' },
   { id: '4', ordem: 4, atalho: '/finalizar', titulo: 'Finalizar atendimento', texto: 'Seu atendimento foi finalizado. A AVSEG agradece!' },
   { id: '5', ordem: 5, atalho: '/atraso',    titulo: 'Pagamento em atraso',   texto: 'Olá, boa tarde! Devido ao atraso, será necessário realizar o pagamento em atraso.' },
-  { id: '6', ordem: 6, atalho: '/pix',       titulo: 'Pagamento via PIX',     texto: 'Para pagar com PIX, é necessário selecionar e copiar a chave informada no boleto.' },
+  { id: '6', ordem: 6, atalho: '/pix',       titulo: 'Pagamento via PIX',     texto: 'Para pagar com PIX, é necessário selecionar e copiar a chave informada na participação mensal.' },
   { id: '7', ordem: 7, atalho: '/detalhes',  titulo: 'Pedir detalhes',        texto: 'Gostaríamos de entender melhor sua solicitação. Poderia nos passar mais detalhes?' },
   { id: '8', ordem: 8, atalho: '/setor',     titulo: 'Encaminhar setor',      texto: 'Encaminhei sua solicitação para o setor responsável. Peço que aguarde um momento.' },
 ];
@@ -545,6 +545,24 @@ app.patch('/api/conversas/:id/humano', autenticar, (req, res) => {
   const conversaAtualizada = conversaDetalhadaPorId(conversa.id);
   io.emit('conversa_atualizada', conversaAtualizada);
   res.json(conversaAtualizada);
+});
+
+// Exclui uma conversa e todo o seu histórico (irreversível) — somente admin
+app.delete("/api/conversas/:id", autenticar, (req, res) => {
+  if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Somente administradores podem excluir conversas." });
+
+  const conversa = db.prepare("SELECT id FROM conversas WHERE id = ?").get(req.params.id);
+  if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada" });
+
+  const transacao = db.transaction(() => {
+    db.prepare("DELETE FROM mensagens WHERE conversaId = ?").run(conversa.id);
+    db.prepare("DELETE FROM conversaEtiquetas WHERE conversaId = ?").run(conversa.id);
+    db.prepare("DELETE FROM conversas WHERE id = ?").run(conversa.id);
+  });
+  transacao();
+
+  io.emit("conversa_excluida", { conversaId: conversa.id });
+  res.json({ ok: true });
 });
 
 // =============================================================================
@@ -878,7 +896,7 @@ app.post("/api/webhook/whatsapp", (req, res) => {
   const transacao = db.transaction(() => {
     let cliente = db.prepare("SELECT * FROM clientes WHERE telefone = ?").get(telefoneNormalizado);
     if (!cliente) {
-      cliente = { id: gerarId(), telefone: telefoneNormalizado, nome: nomeCliente || "Cliente", criadoEm: agora };
+      cliente = { id: gerarId(), telefone: telefoneNormalizado, nome: nomeCliente || "Associado", criadoEm: agora };
       db.prepare("INSERT INTO clientes (id, telefone, nome, criadoEm) VALUES (@id, @telefone, @nome, @criadoEm)").run(cliente);
     } else if (nomeCliente && cliente.nome !== nomeCliente) {
       db.prepare("UPDATE clientes SET nome = ? WHERE id = ?").run(nomeCliente, cliente.id);

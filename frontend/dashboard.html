@@ -156,7 +156,7 @@
               <span id="chatClienteInicial">C</span>
             </div>
             <div class="chat-header-text">
-              <h3 id="chatClienteNome">Cliente</h3>
+              <h3 id="chatClienteNome">Associado</h3>
               <span id="chatClienteTelefone" class="chat-telefone">-</span>
               <p id="chatAtendenteInfo" class="chat-atendente-info">Sem atendente responsável</p>
               <!-- Etiquetas do chat -->
@@ -175,6 +175,7 @@
             <button id="btnTransferirConversa" class="btn-chat-action btn-transferir" type="button">Transferir</button>
             <button id="btnReabrirConversa" class="btn-chat-action btn-reabrir" type="button" style="display:none;">Reabrir</button>
             <button id="btnToggleInfoCliente" class="btn-secondary-small" type="button" title="Informações do associado">ℹ️ Info</button>
+            <button id="btnExcluirConversa" class="btn-chat-action btn-excluir" type="button" title="Excluir conversa" style="display:none;">🗑️ Excluir</button>
 
             <!-- Menu "..." — só aparece no mobile, concentra as ações acima -->
             <button id="btnMenuChatMobile" class="btn-menu-chat-mobile" type="button" aria-label="Mais ações" title="Mais ações" aria-haspopup="true" aria-expanded="false">
@@ -208,6 +209,9 @@
             </button>
             <button type="button" class="menu-chat-mobile-item" data-acao="reabrir" id="menuItemReabrir" style="display:none;">
               <span class="menu-chat-mobile-icone">🔁</span> Reabrir conversa
+            </button>
+            <button type="button" class="menu-chat-mobile-item menu-chat-mobile-item-perigo" data-acao="excluir" id="menuItemExcluir" style="display:none;">
+              <span class="menu-chat-mobile-icone">🗑️</span> Excluir conversa
             </button>
           </div>
         </div>

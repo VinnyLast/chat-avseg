@@ -1425,6 +1425,17 @@ body.modal-aberto {
     color: white;
 }
 
+.btn-excluir {
+    background: rgba(220, 38, 38, 0.12);
+    color: #dc2626;
+    border: 1px solid rgba(220, 38, 38, 0.4);
+}
+
+.btn-excluir:hover {
+    background: #dc2626;
+    color: white;
+}
+
 .btn-reabrir {
     background: var(--yellow-soft);
     color: var(--primary);
@@ -3490,11 +3501,11 @@ body.modal-aberto {
 [data-theme="light"] {
   --primary: #d4a900;
   --primary-hover: #f5c400;
-  --bg-dark: #f0f0f0;
-  --bg-light: #f8f8f8;
-  --bg-card: #ffffff;
-  --bg-card-hover: #f2f2f2;
-  --border: #e0e0e0;
+  --bg-dark: #ece6d8;
+  --bg-light: #f4f0e6;
+  --bg-card: #fbf8f2;
+  --bg-card-hover: #efe9db;
+  --border: #ddd3ba;
   --text-primary: #111111;
   --text-secondary: #555555;
   --yellow-soft: rgba(212, 169, 0, 0.10);
@@ -3504,17 +3515,17 @@ body.modal-aberto {
 }
 
 [data-theme="light"] .sidebar {
-  background: #ffffff;
-  border-right-color: #e5e5e5;
+  background: #fbf8f2;
+  border-right-color: #e2dac4;
 }
 
 [data-theme="light"] .conversas-list {
-  background: #f8f8f8;
+  background: #f4f0e6;
 }
 
 [data-theme="light"] .chat-container,
 [data-theme="light"] .chat-mensagens {
-  background: #f8f8f8 !important;
+  background: #f4f0e6 !important;
   background-image: none !important;
 }
 
@@ -3529,15 +3540,15 @@ body.modal-aberto {
 [data-theme="light"] .chat-input-container,
 [data-theme="light"] .templates-rapidos,
 [data-theme="light"] .anexo-preview {
-  background: #ffffff !important;
-  border-color: #e5e5e5 !important;
+  background: #fbf8f2 !important;
+  border-color: #e2dac4 !important;
 }
 
 [data-theme="light"] .search-input,
 [data-theme="light"] .status-select,
 [data-theme="light"] .btn-secondary-small {
-  background: #f0f0f0 !important;
-  border-color: #ddd !important;
+  background: #ece7d9 !important;
+  border-color: #d8cfb8 !important;
   color: #333 !important;
 }
 
@@ -3546,7 +3557,7 @@ body.modal-aberto {
 }
 
 [data-theme="light"] .conversa-item:hover {
-  background: #f0f0f0 !important;
+  background: #ece7d9 !important;
 }
 
 [data-theme="light"] .conversa-item.active {
@@ -3554,26 +3565,26 @@ body.modal-aberto {
 }
 
 [data-theme="light"] .mensagem.cliente .mensagem-conteudo {
-  background: #eeeeee;
+  background: #eae4d4;
   color: #111111;
 }
 
 [data-theme="light"] #chatInput {
-  background: #f0f0f0;
-  border-color: #ddd;
+  background: #ece7d9;
+  border-color: #d8cfb8;
 }
 
 [data-theme="light"] .modal-card,
 [data-theme="light"] .modal-imagem-card {
-  background: #ffffff;
+  background: #fbf8f2;
 }
 
 [data-theme="light"] ::-webkit-scrollbar-track {
-  background: #f0f0f0;
+  background: #ece7d9;
 }
 
 [data-theme="light"] ::-webkit-scrollbar-thumb {
-  background: #cccccc;
+  background: #c9bfa0;
 }
 
 /* Transição suave ao alternar entre tema claro e escuro */
