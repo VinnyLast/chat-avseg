@@ -3675,6 +3675,33 @@ body.modal-aberto {
   margin-bottom: 4px;
 }
 
+/* Resposta automática do bot, espelhada pra dar contexto ao atendente —
+   distinta da nota interna (escrita por humano) e do aviso de sistema
+   compacto (transferência/finalização). */
+.mensagem.bot-espelho {
+  align-self: flex-start;
+  max-width: 80%;
+}
+
+.mensagem.bot-espelho .mensagem-conteudo {
+  background: rgba(59, 130, 246, 0.10);
+  border-left: 3px solid #3b82f6;
+  border-radius: 8px;
+  color: var(--text-primary);
+}
+
+.bot-espelho-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #3b82f6;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
 /* =============================================================================
    CONTADOR DE CARACTERES
    ============================================================================= */

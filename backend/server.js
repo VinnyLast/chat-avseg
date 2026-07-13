@@ -940,13 +940,17 @@ app.post("/api/webhook/whatsapp", (req, res) => {
   const apiKey = req.headers["x-api-key"];
   if (INTERNAL_API_KEY && apiKey !== INTERNAL_API_KEY) return res.status(401).json({ erro: "API key inválida" });
 
-  const { telefone, mensagem, nomeCliente, tipo, arquivoUrl, mimeType, nomeArquivo, solicitouHumano } = req.body;
+  const { telefone, mensagem, nomeCliente, tipo, arquivoUrl, mimeType, nomeArquivo, solicitouHumano, origemMsg } = req.body;
   const textoMsg = String(mensagem || '').trim().toLowerCase();
   const pedidoHumano = solicitouHumano === true || textoMsg === '5';
   // Chamada "só sinaliza humano" — usada pela IA do bot quando detecta que o associado
   // quer falar com atendente numa mensagem que já foi encaminhada antes (evita duplicar
   // a mensagem só pra atualizar a flag).
   const apenasSinalizarHumano = !mensagem && !arquivoUrl && solicitouHumano === true;
+  // Resposta automática do próprio bot (menu, confirmações) — grava como nota interna
+  // (origem "sistema", privada), igual já acontecia no Chatwoot, em vez de como se fosse
+  // o associado falando.
+  const ehMensagemBot = origemMsg === "bot";
   if (!telefone || (!mensagem && !arquivoUrl && !apenasSinalizarHumano)) return res.status(400).json({ erro: "Dados incompletos" });
 
   const telefoneNormalizado = normalizarTelefone(telefone);
@@ -970,7 +974,7 @@ app.post("/api/webhook/whatsapp", (req, res) => {
     let conversa = db.prepare("SELECT * FROM conversas WHERE telefone = ? AND status != 'finalizada'").get(telefoneNormalizado);
 
     if (!conversa) {
-      if (apenasSinalizarHumano) return;
+      if (apenasSinalizarHumano || ehMensagemBot) return;
       conversa = {
         id: gerarId(), telefone: telefoneNormalizado, clienteId: cliente.id, clienteNome: cliente.nome,
         status: "aguardando", atendenteId: null, solicitouHumano: pedidoHumano ? 1 : 0,
@@ -1002,7 +1006,7 @@ app.post("/api/webhook/whatsapp", (req, res) => {
       mensagemInserida = inserirMensagemEAtualizarConversa({
         id: gerarId(), conversaId: conversa.id, tipo: tipo || detectarTipoPorMime(mimeType || "") || "texto",
         texto: mensagem || "", arquivoUrl: arquivoUrl || null, mimeType: mimeType || null, nomeArquivo: nomeArquivo || null,
-        origem: "cliente", lida: false, criadoEm: agora,
+        origem: ehMensagemBot ? "sistema" : "cliente", privado: ehMensagemBot, lida: ehMensagemBot, criadoEm: agora,
       });
     }
   });

@@ -937,11 +937,14 @@ function adicionarMensagemNaTela(mensagem) {
   }
 
   const tipo = mensagem.tipo || "texto";
+  const ehRespostaBot = mensagem.origem === "sistema" && mensagem.privado && tipo !== "sistema";
 
   const div = document.createElement("div");
   div.className = tipo === "nota"
     ? "mensagem nota-interna"
-    : `mensagem ${mensagem.origem === "atendente" ? "atendente" : mensagem.origem === "sistema" ? "sistema" : "cliente"}`;
+    : ehRespostaBot
+      ? "mensagem bot-espelho"
+      : `mensagem ${mensagem.origem === "atendente" ? "atendente" : mensagem.origem === "sistema" ? "sistema" : "cliente"}`;
 
   // Classe explícita (não depende do seletor CSS :has(), sem suporte no Safari < 16.4 / iOS antigo)
   if (tipo === "imagem") div.classList.add("mensagem-com-imagem");
@@ -953,6 +956,8 @@ function adicionarMensagemNaTela(mensagem) {
 
   if (tipo === "nota") {
     conteudo = `<p class="nota-interna-label">🔒 Nota interna</p><p class="mensagem-texto">${escaparHTML(mensagem.texto || "")}</p>`;
+  } else if (ehRespostaBot) {
+    conteudo = `<p class="bot-espelho-label">🤖 Bot (resposta automática)</p><p class="mensagem-texto">${escaparHTML(mensagem.texto || "")}</p>`;
   } else if (tipo === "imagem" && arquivoUrl) {
     conteudo = `<div class="mensagem-midia"><img src="${arquivoUrl}" alt="Imagem enviada" class="mensagem-imagem" data-url="${arquivoUrl}"></div>${mensagem.texto ? `<p class="mensagem-texto legenda-midia">${escaparHTML(mensagem.texto)}</p>` : ""}`;
   } else if (tipo === "audio" && arquivoUrl) {
