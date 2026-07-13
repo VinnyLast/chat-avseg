@@ -108,7 +108,7 @@ function detectarTipoPorMime(mimeType = "") {
   if (mimeType.startsWith("image/")) return "imagem";
   if (mimeType.startsWith("audio/")) return "audio";
   if (mimeType.startsWith("video/")) return "video";
-  return "arquivo";
+  return mimeType ? "arquivo" : null;
 }
 
 // =============================================================================
@@ -174,14 +174,17 @@ function mapearConversa(row, etiquetasIds) {
     criadoEm: row.criadoEm,
     atualizadoEm: row.atualizadoEm,
     finalizadaEm: row.finalizadaEm || null,
+    motivoFinalizacaoId: row.motivoFinalizacaoId || null,
+    motivoFinalizacaoNome: row.motivoFinalizacaoNome || null,
   };
 }
 
 function buscarConversaComAtendente(conversaId) {
   return db.prepare(`
-    SELECT c.*, u.nome AS atendenteNome
+    SELECT c.*, u.nome AS atendenteNome, m.nome AS motivoFinalizacaoNome
     FROM conversas c
     LEFT JOIN usuarios u ON u.id = c.atendenteId
+    LEFT JOIN motivos m ON m.id = c.motivoFinalizacaoId
     WHERE c.id = ?
   `).get(conversaId);
 }
@@ -298,6 +301,20 @@ function criarEtiquetasPadraoSeNaoExistir() {
   const inserir = db.prepare("INSERT INTO etiquetas (id, nome, cor, criadoEm) VALUES (?, ?, ?, ?)");
   etiquetasPadrao.forEach((e) => inserir.run(gerarId(), e.nome, e.cor, new Date().toISOString()));
   console.log("✅ Etiquetas padrão criadas.");
+}
+
+function criarMotivosPadraoSeNaoExistir() {
+  const total = db.prepare("SELECT COUNT(*) n FROM motivos").get().n;
+  if (total > 0) return;
+  const motivosPadrao = [
+    "Dúvida resolvida",
+    "Sem resposta do associado",
+    "Solicitação encaminhada a outro setor",
+    "Duplicidade",
+  ];
+  const inserir = db.prepare("INSERT INTO motivos (id, nome, criadoEm) VALUES (?, ?, ?)");
+  motivosPadrao.forEach((nome) => inserir.run(gerarId(), nome, new Date().toISOString()));
+  console.log("✅ Motivos padrão criados.");
 }
 
 const TEMPLATES_PADRAO = [
@@ -427,9 +444,10 @@ app.post("/api/upload", autenticar, upload.single("arquivo"), (req, res) => {
 // =============================================================================
 app.get("/api/conversas", autenticar, (req, res) => {
   const linhas = db.prepare(`
-    SELECT c.*, u.nome AS atendenteNome
+    SELECT c.*, u.nome AS atendenteNome, m.nome AS motivoFinalizacaoNome
     FROM conversas c
     LEFT JOIN usuarios u ON u.id = c.atendenteId
+    LEFT JOIN motivos m ON m.id = c.motivoFinalizacaoId
     ORDER BY c.ultimaMensagemData DESC
   `).all();
 
@@ -444,13 +462,14 @@ app.get("/api/conversas/:id", autenticar, (req, res) => {
 });
 
 app.patch("/api/conversas/:id", autenticar, async (req, res) => {
-  const { status, atendenteId, assumir } = req.body;
+  const { status, atendenteId, assumir, motivoFinalizacaoId } = req.body;
   const conversa = db.prepare("SELECT * FROM conversas WHERE id = ?").get(req.params.id);
   if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada" });
 
   let novoAtendenteId = conversa.atendenteId;
   let novoStatus = conversa.status;
   let novaFinalizadaEm = conversa.finalizadaEm;
+  let novoMotivoFinalizacaoId = conversa.motivoFinalizacaoId;
 
   if (assumir) {
     if (conversa.atendenteId && conversa.atendenteId !== req.usuario.id && conversa.status === "em_atendimento") {
@@ -463,15 +482,21 @@ app.patch("/api/conversas/:id", autenticar, async (req, res) => {
 
   if (status) {
     novoStatus = status;
-    if (status === "finalizada") novaFinalizadaEm = new Date().toISOString();
-    if (status === "aguardando" || status === "em_atendimento") novaFinalizadaEm = null;
+    if (status === "finalizada") {
+      novaFinalizadaEm = new Date().toISOString();
+      novoMotivoFinalizacaoId = motivoFinalizacaoId || null;
+    }
+    if (status === "aguardando" || status === "em_atendimento") {
+      novaFinalizadaEm = null;
+      novoMotivoFinalizacaoId = null;
+    }
   }
 
   if (atendenteId !== undefined) novoAtendenteId = atendenteId;
   const atualizadoEm = new Date().toISOString();
 
-  db.prepare("UPDATE conversas SET status = ?, atendenteId = ?, finalizadaEm = ?, atualizadoEm = ? WHERE id = ?")
-    .run(novoStatus, novoAtendenteId, novaFinalizadaEm, atualizadoEm, conversa.id);
+  db.prepare("UPDATE conversas SET status = ?, atendenteId = ?, finalizadaEm = ?, motivoFinalizacaoId = ?, atualizadoEm = ? WHERE id = ?")
+    .run(novoStatus, novoAtendenteId, novaFinalizadaEm, novoMotivoFinalizacaoId, atualizadoEm, conversa.id);
 
   const conversaAtualizada = conversaDetalhadaPorId(conversa.id);
   io.emit("conversa_atualizada", conversaAtualizada);
@@ -479,7 +504,11 @@ app.patch("/api/conversas/:id", autenticar, async (req, res) => {
   if (status === "finalizada") {
     try {
       const axios = require("axios");
-      await axios.post(`${WHATSAPP_API_URL}/chat/finalizar`, { telefone: conversa.telefone, conversaId: conversa.id }, { headers: { "x-api-key": INTERNAL_API_KEY } });
+      await axios.post(`${WHATSAPP_API_URL}/chat/finalizar`, {
+        telefone: conversa.telefone,
+        conversaId: conversa.id,
+        mensagem: "Sua conversa com a equipe AVSEG foi finalizada. Se precisar de algo mais, é só nos chamar novamente! 😊",
+      }, { headers: { "x-api-key": INTERNAL_API_KEY } });
     } catch (_) {}
   }
 
@@ -807,6 +836,36 @@ app.delete("/api/conversas/:id/etiquetas/:etiquetaId", autenticar, (req, res) =>
 });
 
 // =============================================================================
+// ROTAS DE MOTIVOS DE FINALIZAÇÃO
+// =============================================================================
+app.get("/api/motivos", autenticar, (req, res) => {
+  res.json(db.prepare("SELECT * FROM motivos ORDER BY nome").all());
+});
+
+app.post("/api/motivos", autenticar, (req, res) => {
+  if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Somente administradores podem criar motivos." });
+  const { nome } = req.body;
+  if (!nome?.trim()) return res.status(400).json({ erro: "Nome do motivo é obrigatório." });
+
+  const conflito = db.prepare("SELECT id FROM motivos WHERE LOWER(nome) = LOWER(?)").get(nome.trim());
+  if (conflito) return res.status(400).json({ erro: "Já existe um motivo com este nome." });
+
+  const novo = { id: gerarId(), nome: nome.trim(), criadoEm: new Date().toISOString() };
+  db.prepare("INSERT INTO motivos (id, nome, criadoEm) VALUES (@id, @nome, @criadoEm)").run(novo);
+  res.json(novo);
+});
+
+app.delete("/api/motivos/:id", autenticar, (req, res) => {
+  if (req.usuario.role !== "admin") return res.status(403).json({ erro: "Sem permissão." });
+  const resultado = db.prepare("DELETE FROM motivos WHERE id = ?").run(req.params.id);
+  if (resultado.changes === 0) return res.status(404).json({ erro: "Motivo não encontrado." });
+
+  // Conversas que já usaram esse motivo mantêm o histórico, só perdem a referência
+  db.prepare("UPDATE conversas SET motivoFinalizacaoId = NULL WHERE motivoFinalizacaoId = ?").run(req.params.id);
+  res.json({ ok: true });
+});
+
+// =============================================================================
 // ROTAS DE CLIENTES
 // =============================================================================
 app.get("/api/clientes", autenticar, (req, res) => {
@@ -884,7 +943,11 @@ app.post("/api/webhook/whatsapp", (req, res) => {
   const { telefone, mensagem, nomeCliente, tipo, arquivoUrl, mimeType, nomeArquivo, solicitouHumano } = req.body;
   const textoMsg = String(mensagem || '').trim().toLowerCase();
   const pedidoHumano = solicitouHumano === true || textoMsg === '5';
-  if (!telefone || (!mensagem && !arquivoUrl)) return res.status(400).json({ erro: "Dados incompletos" });
+  // Chamada "só sinaliza humano" — usada pela IA do bot quando detecta que o associado
+  // quer falar com atendente numa mensagem que já foi encaminhada antes (evita duplicar
+  // a mensagem só pra atualizar a flag).
+  const apenasSinalizarHumano = !mensagem && !arquivoUrl && solicitouHumano === true;
+  if (!telefone || (!mensagem && !arquivoUrl && !apenasSinalizarHumano)) return res.status(400).json({ erro: "Dados incompletos" });
 
   const telefoneNormalizado = normalizarTelefone(telefone);
   const agora = new Date().toISOString();
@@ -896,6 +959,7 @@ app.post("/api/webhook/whatsapp", (req, res) => {
   const transacao = db.transaction(() => {
     let cliente = db.prepare("SELECT * FROM clientes WHERE telefone = ?").get(telefoneNormalizado);
     if (!cliente) {
+      if (apenasSinalizarHumano) return;
       cliente = { id: gerarId(), telefone: telefoneNormalizado, nome: nomeCliente || "Associado", criadoEm: agora };
       db.prepare("INSERT INTO clientes (id, telefone, nome, criadoEm) VALUES (@id, @telefone, @nome, @criadoEm)").run(cliente);
     } else if (nomeCliente && cliente.nome !== nomeCliente) {
@@ -906,6 +970,7 @@ app.post("/api/webhook/whatsapp", (req, res) => {
     let conversa = db.prepare("SELECT * FROM conversas WHERE telefone = ? AND status != 'finalizada'").get(telefoneNormalizado);
 
     if (!conversa) {
+      if (apenasSinalizarHumano) return;
       conversa = {
         id: gerarId(), telefone: telefoneNormalizado, clienteId: cliente.id, clienteNome: cliente.nome,
         status: "aguardando", atendenteId: null, solicitouHumano: pedidoHumano ? 1 : 0,
@@ -933,18 +998,22 @@ app.post("/api/webhook/whatsapp", (req, res) => {
     }
 
     conversaId = conversa.id;
-    mensagemInserida = inserirMensagemEAtualizarConversa({
-      id: gerarId(), conversaId: conversa.id, tipo: tipo || detectarTipoPorMime(mimeType || "") || "texto",
-      texto: mensagem || "", arquivoUrl: arquivoUrl || null, mimeType: mimeType || null, nomeArquivo: nomeArquivo || null,
-      origem: "cliente", lida: false, criadoEm: agora,
-    });
+    if (!apenasSinalizarHumano) {
+      mensagemInserida = inserirMensagemEAtualizarConversa({
+        id: gerarId(), conversaId: conversa.id, tipo: tipo || detectarTipoPorMime(mimeType || "") || "texto",
+        texto: mensagem || "", arquivoUrl: arquivoUrl || null, mimeType: mimeType || null, nomeArquivo: nomeArquivo || null,
+        origem: "cliente", lida: false, criadoEm: agora,
+      });
+    }
   });
   transacao();
+
+  if (!conversaId) return res.json({ ok: true });
 
   const conversaDetalhada = conversaDetalhadaPorId(conversaId);
 
   if (novaConversa) io.emit("nova_conversa", conversaDetalhada);
-  io.emit("nova_mensagem", { conversaId, mensagem: mensagemInserida });
+  if (mensagemInserida) io.emit("nova_mensagem", { conversaId, mensagem: mensagemInserida });
   io.emit("conversa_atualizada", conversaDetalhada);
 
   res.json({ ok: true, conversaId });
@@ -965,6 +1034,7 @@ io.on("connection", (socket) => {
 // =============================================================================
 criarAdminSeNaoExistir();
 criarEtiquetasPadraoSeNaoExistir();
+criarMotivosPadraoSeNaoExistir();
 criarTemplatesPadraoSeNaoExistir();
 
 server.listen(PORT, () => {

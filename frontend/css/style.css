@@ -3439,6 +3439,20 @@ body.modal-aberto {
   animation: conversaEntrada 0.18s ease both;
 }
 
+.conversa-item.finalizada {
+  opacity: 0.5;
+  filter: grayscale(0.7);
+}
+
+.conversa-item.finalizada:hover {
+  opacity: 0.75;
+}
+
+.conversa-item.finalizada.active {
+  opacity: 0.9;
+  filter: grayscale(0.3);
+}
+
 /* Scrolbar suave na área de mensagens */
 .chat-mensagens {
   scroll-behavior: smooth;

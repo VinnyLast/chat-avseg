@@ -164,10 +164,10 @@ function svgIcon(nome, tamanho = 18) {
 // =============================================================================
 
 function estaHumanoPendente(conversa) {
-  // Ativa se: solicitouHumano=true OU (aguardando sem atendente)
-  if (conversa.solicitouHumano) return true;
-  if (conversa.status === 'aguardando' && !conversa.atendenteId) return true;
-  return false;
+  // Só marca como urgente quando o associado realmente pediu atendimento
+  // humano (solicitouHumano) — uma conversa nova "aguardando" sem atendente
+  // ainda não é, por si só, um pedido urgente.
+  return Boolean(conversa.solicitouHumano);
 }
 
 function tocarSomHumano(conversaId) {
@@ -486,6 +486,133 @@ async function excluirEtiqueta(id, nome) {
 }
 
 // =============================================================================
+// MOTIVOS DE FINALIZAÇÃO — MODAL ADMIN
+// =============================================================================
+
+let todosMotivos = [];
+
+async function carregarMotivos() {
+  try {
+    const resposta = await fetch(`${API_URL}/api/motivos`, { headers: authHeaders() });
+    if (!resposta.ok) return;
+    todosMotivos = await resposta.json();
+  } catch (_) {}
+}
+
+function abrirModalMotivos() {
+  const modal = document.getElementById("modalMotivos");
+  if (!modal) return;
+  modal.style.display = "flex";
+  carregarMotivosAdmin();
+}
+
+function fecharModalMotivos() {
+  const modal = document.getElementById("modalMotivos");
+  if (modal) modal.style.display = "none";
+}
+
+async function carregarMotivosAdmin() {
+  const lista = document.getElementById("listaMotivosAdmin");
+  if (!lista) return;
+  lista.innerHTML = `<div class="loading">Carregando motivos...</div>`;
+
+  await carregarMotivos();
+
+  if (!todosMotivos.length) {
+    lista.innerHTML = `<div class="loading">Nenhum motivo criado ainda.</div>`;
+    return;
+  }
+
+  lista.innerHTML = todosMotivos.map((m) => `
+    <div class="etiqueta-admin-item">
+      <span class="etiqueta-admin-nome">${escaparHTML(m.nome)}</span>
+      <div class="etiqueta-admin-acoes">
+        <button class="btn-excluir-motivo" data-id="${m.id}" data-nome="${escaparHTML(m.nome)}">
+          Excluir
+        </button>
+      </div>
+    </div>
+  `).join("");
+}
+
+async function criarMotivo(e) {
+  e.preventDefault();
+  const nome = document.getElementById("novoMotivoNome")?.value.trim();
+  const erroEl = document.getElementById("erroMotivo");
+
+  if (!nome) {
+    if (erroEl) { erroEl.textContent = "Informe o nome do motivo."; erroEl.style.display = "block"; }
+    return;
+  }
+  if (erroEl) { erroEl.textContent = ""; erroEl.style.display = "none"; }
+
+  try {
+    const resposta = await fetch(`${API_URL}/api/motivos`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ nome }),
+    });
+    const dados = await resposta.json();
+    if (!resposta.ok) {
+      if (erroEl) { erroEl.textContent = dados.erro || "Erro ao criar motivo."; erroEl.style.display = "block"; }
+      return;
+    }
+    document.getElementById("formNovoMotivo")?.reset();
+    await carregarMotivosAdmin();
+    if (window.AVSEGNotify) AVSEGNotify.toast("Motivo criado!", "sucesso");
+  } catch (_) {
+    if (erroEl) { erroEl.textContent = "Erro de conexão."; erroEl.style.display = "block"; }
+  }
+}
+
+async function excluirMotivo(id, nome) {
+  if (!confirm(`Excluir o motivo "${nome}"?`)) return;
+  try {
+    const resposta = await fetch(`${API_URL}/api/motivos/${id}`, {
+      method: "DELETE", headers: authHeaders(),
+    });
+    if (!resposta.ok) { alert("Erro ao excluir motivo."); return; }
+    await carregarMotivosAdmin();
+    if (window.AVSEGNotify) AVSEGNotify.toast("Motivo excluído.", "aviso");
+  } catch (_) {}
+}
+
+// =============================================================================
+// FINALIZAR CONVERSA — SELEÇÃO DE MOTIVO
+// =============================================================================
+
+function abrirModalFinalizar() {
+  const modal = document.getElementById("modalFinalizar");
+  if (!modal) return;
+  modal.style.display = "flex";
+  carregarMotivosParaFinalizar();
+}
+
+function fecharModalFinalizar() {
+  const modal = document.getElementById("modalFinalizar");
+  if (modal) modal.style.display = "none";
+}
+
+async function carregarMotivosParaFinalizar() {
+  const lista = document.getElementById("listaMotivosFinalizar");
+  if (!lista) return;
+  lista.innerHTML = `<div class="loading">Carregando motivos...</div>`;
+
+  await carregarMotivos();
+
+  if (!todosMotivos.length) {
+    lista.innerHTML = `<div class="loading">Nenhum motivo cadastrado — use o botão abaixo.</div>`;
+    return;
+  }
+
+  lista.innerHTML = todosMotivos.map((m) => `
+    <button type="button" class="transferir-atendente-item motivo-finalizar-item" data-id="${m.id}">
+      <div class="transferir-atendente-info"><strong>${escaparHTML(m.nome)}</strong></div>
+    </button>
+  `).join("");
+}
+
+// =============================================================================
 // AUTENTICAÇÃO
 // =============================================================================
 
@@ -502,6 +629,9 @@ async function verificarAutenticacao() {
     // Mostra botão de etiquetas apenas para admin
     const btnEtiquetas = document.getElementById("btnAbrirEtiquetas");
     if (btnEtiquetas) btnEtiquetas.style.display = usuario.role === "admin" ? "flex" : "none";
+
+    const btnMotivos = document.getElementById("btnAbrirMotivos");
+    if (btnMotivos) btnMotivos.style.display = usuario.role === "admin" ? "flex" : "none";
   } catch (_) { sair(); }
 }
 
@@ -590,6 +720,7 @@ function _renderizarItemConversa(conversa) {
   item.className = "conversa-item";
   item.dataset.conversaId = conversa.id;
   if (conversaAtual?.id === conversa.id) item.classList.add("active");
+  if (conversa.status === "finalizada") item.classList.add("finalizada");
 
   const humano = estaHumanoPendente(conversa);
   if (humano) {
@@ -1123,10 +1254,10 @@ async function marcarComoLidas(conversaId) {
 // STATUS / ATENDENTE
 // =============================================================================
 
-async function atualizarStatus(status) {
+async function atualizarStatus(status, extra = {}) {
   if (!conversaAtual) return;
   try {
-    const resposta = await fetch(`${API_URL}/api/conversas/${conversaAtual.id}`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify({ status }) });
+    const resposta = await fetch(`${API_URL}/api/conversas/${conversaAtual.id}`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify({ status, ...extra }) });
     if (!resposta.ok) return;
     const atualizada = await resposta.json();
     conversas = conversas.map((c) => c.id === atualizada.id ? { ...c, ...atualizada } : c);
@@ -1174,8 +1305,11 @@ function rotuloStatusConversa(conversa) {
 function atualizarInfoAtendente(conversa) {
   if (!chatAtendenteInfo) return;
   const status = rotuloStatusConversa(conversa);
-  if (conversa?.atendenteNome) { chatAtendenteInfo.textContent = `${status} • Atendente: ${conversa.atendenteNome}`; chatAtendenteInfo.classList.add("com-atendente"); }
-  else { chatAtendenteInfo.textContent = `${status} • Sem atendente`; chatAtendenteInfo.classList.remove("com-atendente"); }
+  const sufixoMotivo = conversa?.status === "finalizada" && conversa?.motivoFinalizacaoNome
+    ? ` • Motivo: ${conversa.motivoFinalizacaoNome}`
+    : "";
+  if (conversa?.atendenteNome) { chatAtendenteInfo.textContent = `${status} • Atendente: ${conversa.atendenteNome}${sufixoMotivo}`; chatAtendenteInfo.classList.add("com-atendente"); }
+  else { chatAtendenteInfo.textContent = `${status} • Sem atendente${sufixoMotivo}`; chatAtendenteInfo.classList.remove("com-atendente"); }
 
   // Banner de humano pendente
   const bannerExistente = document.getElementById("chatHumanoBanner");
@@ -1235,8 +1369,13 @@ function atualizarBotoesConversa(conversa) {
 }
 
 async function finalizarConversa() {
-  if (!conversaAtual || !confirm("Deseja finalizar esta conversa?")) return;
-  await atualizarStatus("finalizada");
+  if (!conversaAtual) return;
+  abrirModalFinalizar();
+}
+
+async function finalizarComMotivo(motivoId) {
+  fecharModalFinalizar();
+  await atualizarStatus("finalizada", { motivoFinalizacaoId: motivoId || null });
 }
 
 async function reabrirConversa() {
@@ -1608,6 +1747,12 @@ function configurarEventos() {
     const btnExcluirEt = e.target.closest(".btn-excluir-etiqueta");
     if (btnExcluirEt) { excluirEtiqueta(btnExcluirEt.dataset.id, btnExcluirEt.dataset.nome); return; }
 
+    const btnExcluirMot = e.target.closest(".btn-excluir-motivo");
+    if (btnExcluirMot) { excluirMotivo(btnExcluirMot.dataset.id, btnExcluirMot.dataset.nome); return; }
+
+    const btnMotivoFinalizar = e.target.closest(".motivo-finalizar-item");
+    if (btnMotivoFinalizar) { finalizarComMotivo(btnMotivoFinalizar.dataset.id); return; }
+
     const btnTransferirAt = e.target.closest(".transferir-atendente-item");
     if (btnTransferirAt) { transferirConversa(btnTransferirAt.dataset.id, btnTransferirAt.dataset.nome); return; }
 
@@ -1642,6 +1787,15 @@ function configurarEventos() {
   document.getElementById("btnFecharEtiquetas")?.addEventListener("click", fecharModalEtiquetas);
   document.getElementById("formNovaEtiqueta")?.addEventListener("submit", criarEtiqueta);
   document.getElementById("modalEtiquetas")?.addEventListener("click", (e) => { if (e.target === document.getElementById("modalEtiquetas")) fecharModalEtiquetas(); });
+
+  document.getElementById("btnAbrirMotivos")?.addEventListener("click", abrirModalMotivos);
+  document.getElementById("btnFecharMotivos")?.addEventListener("click", fecharModalMotivos);
+  document.getElementById("formNovoMotivo")?.addEventListener("submit", criarMotivo);
+  document.getElementById("modalMotivos")?.addEventListener("click", (e) => { if (e.target === document.getElementById("modalMotivos")) fecharModalMotivos(); });
+
+  document.getElementById("btnFecharFinalizar")?.addEventListener("click", fecharModalFinalizar);
+  document.getElementById("btnConfirmarFinalizarSemMotivo")?.addEventListener("click", () => finalizarComMotivo(null));
+  document.getElementById("modalFinalizar")?.addEventListener("click", (e) => { if (e.target === document.getElementById("modalFinalizar")) fecharModalFinalizar(); });
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") { fecharModalImagem(); fecharModalAtendentes(); fecharModalTransferir(); fecharModalEtiquetas(); fecharDropdownEtiquetas(); fecharPainelClienteInfo(); fecharMenuChatMobile(); }

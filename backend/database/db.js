@@ -103,6 +103,12 @@ db.exec(`
     criadoEm TEXT,
     atualizadoEm TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS motivos (
+    id TEXT PRIMARY KEY,
+    nome TEXT NOT NULL,
+    criadoEm TEXT NOT NULL
+  );
 `);
 
 // Migração leve pra bancos criados antes da coluna existir — CREATE TABLE
@@ -110,5 +116,8 @@ db.exec(`
 const colunasUsuarios = db.prepare("PRAGMA table_info(usuarios)").all().map((c) => c.name);
 if (!colunasUsuarios.includes("resetToken")) db.exec("ALTER TABLE usuarios ADD COLUMN resetToken TEXT");
 if (!colunasUsuarios.includes("resetTokenExpira")) db.exec("ALTER TABLE usuarios ADD COLUMN resetTokenExpira TEXT");
+
+const colunasConversas = db.prepare("PRAGMA table_info(conversas)").all().map((c) => c.name);
+if (!colunasConversas.includes("motivoFinalizacaoId")) db.exec("ALTER TABLE conversas ADD COLUMN motivoFinalizacaoId TEXT");
 
 module.exports = db;
