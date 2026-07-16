@@ -311,6 +311,21 @@ body {
 .conversas-items {
     flex: 1;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(245, 196, 0, 0.28) transparent;
+}
+
+.conversas-items::-webkit-scrollbar {
+    width: 6px;
+}
+
+.conversas-items::-webkit-scrollbar-thumb {
+    background: rgba(245, 196, 0, 0.28);
+    border-radius: 999px;
+}
+
+.conversas-items::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .conversa-item {
@@ -491,6 +506,93 @@ body {
     font-size: 13px;
     cursor: pointer;
 }
+
+/* Dropdown de status customizado (substitui o <select> nativo) */
+.status-dropdown-wrapper {
+    position: relative;
+}
+
+.status-dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #0f0f0f;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.status-dropdown-btn::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    margin-left: 2px;
+    border-right: 1.5px solid var(--text-secondary);
+    border-bottom: 1.5px solid var(--text-secondary);
+    transform: rotate(45deg);
+    transition: transform 0.15s;
+}
+
+.status-dropdown-wrapper.aberto .status-dropdown-btn::after {
+    transform: rotate(-135deg);
+}
+
+.status-dropdown-btn:hover {
+    border-color: var(--yellow-border);
+}
+
+.status-dropdown-list {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 20;
+    min-width: 180px;
+    background: #151515;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.status-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    width: 100%;
+}
+
+.status-dropdown-item:hover {
+    background: var(--yellow-soft);
+}
+
+.status-dot-indicador {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-dot-aguardando { background: #f5c400; box-shadow: 0 0 6px rgba(245, 196, 0, 0.6); }
+.status-dot-em_atendimento { background: #31c46c; box-shadow: 0 0 6px rgba(49, 196, 108, 0.6); }
+.status-dot-finalizada { background: #888; }
 
 .chat-mensagens {
     flex: 1;
@@ -1713,6 +1815,41 @@ body.modal-aberto {
     cursor: pointer;
     text-align: left;
     transition: all 0.2s;
+}
+
+.motivo-finalizar-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #0f0f0f;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+}
+
+.motivo-finalizar-item svg {
+    flex-shrink: 0;
+    color: var(--text-secondary);
+    transition: transform 0.2s, color 0.2s;
+}
+
+.motivo-finalizar-item:hover {
+    border-color: var(--yellow-border);
+    background: var(--yellow-soft);
+    transform: translateY(-1px);
+}
+
+.motivo-finalizar-item:hover svg {
+    color: var(--primary);
+    transform: translateX(2px);
 }
 
 .transferir-atendente-item:hover {

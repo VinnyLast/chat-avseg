@@ -154,6 +154,10 @@ function svgIcon(nome, tamanho = 18) {
     planilha:  `<svg viewBox="0 0 24 24" ${attrs}><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M9 4v16"></path><path d="M15 4v16"></path></svg>`,
     zip:       `<svg viewBox="0 0 24 24" ${attrs}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M10 4h2"></path><path d="M12 6h-2"></path></svg>`,
     tag:       `<svg viewBox="0 0 24 24" ${attrs}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>`,
+    chevron:   `<svg viewBox="0 0 24 24" ${attrs}><path d="M9 18l6-6-6-6"></path></svg>`,
+    check:     `<svg viewBox="0 0 24 24" ${attrs}><path d="M20 6L9 17l-5-5"></path></svg>`,
+    trash:     `<svg viewBox="0 0 24 24" ${attrs}><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`,
+    info:      `<svg viewBox="0 0 24 24" ${attrs}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
   };
   return icons[nome] || icons.clip;
 }
@@ -606,8 +610,9 @@ async function carregarMotivosParaFinalizar() {
   }
 
   lista.innerHTML = todosMotivos.map((m) => `
-    <button type="button" class="transferir-atendente-item motivo-finalizar-item" data-id="${m.id}">
-      <div class="transferir-atendente-info"><strong>${escaparHTML(m.nome)}</strong></div>
+    <button type="button" class="motivo-finalizar-item" data-id="${m.id}">
+      <span>${escaparHTML(m.nome)}</span>
+      ${svgIcon("chevron", 16)}
     </button>
   `).join("");
 }
@@ -836,7 +841,7 @@ async function abrirConversa(conversaId) {
   chatClienteInicial.textContent = primeiraLetra(conversa.clienteNome);
   chatClienteNome.textContent = conversa.clienteNome || "Associado";
   chatClienteTelefone.textContent = formatarTelefone(conversa.telefone);
-  chatStatus.value = conversa.status || "aguardando";
+  definirStatusDropdown(conversa.status || "aguardando");
   atualizarInfoAtendente(conversa);
   atualizarBotoesConversa(conversa);
   renderizarEtiquetasNoChat(conversa);
@@ -1259,6 +1264,28 @@ async function marcarComoLidas(conversaId) {
 // STATUS / ATENDENTE
 // =============================================================================
 
+const STATUS_LABELS = { aguardando: "Aguardando", em_atendimento: "Em Atendimento", finalizada: "Finalizada" };
+
+// Dropdown de status customizado — o <select id="chatStatus"> continua existindo
+// (oculto) como fonte de valor pro resto do código, só a UI visível muda.
+function definirStatusDropdown(valor) {
+  chatStatus.value = valor;
+  const dot = document.getElementById("statusDropdownDot");
+  const label = document.getElementById("statusDropdownLabel");
+  if (dot) dot.className = `status-dot-indicador status-dot-${valor}`;
+  if (label) label.textContent = STATUS_LABELS[valor] || valor;
+}
+
+function fecharStatusDropdown() {
+  document.getElementById("statusDropdownList")?.style.setProperty("display", "none");
+  document.getElementById("statusDropdownWrapper")?.classList.remove("aberto");
+}
+
+function abrirStatusDropdown() {
+  document.getElementById("statusDropdownList")?.style.setProperty("display", "flex");
+  document.getElementById("statusDropdownWrapper")?.classList.add("aberto");
+}
+
 async function atualizarStatus(status, extra = {}) {
   if (!conversaAtual) return;
   try {
@@ -1267,7 +1294,7 @@ async function atualizarStatus(status, extra = {}) {
     const atualizada = await resposta.json();
     conversas = conversas.map((c) => c.id === atualizada.id ? { ...c, ...atualizada } : c);
     conversaAtual = { ...conversaAtual, ...atualizada };
-    chatStatus.value = conversaAtual.status;
+    definirStatusDropdown(conversaAtual.status);
     atualizarInfoAtendente(conversaAtual); atualizarBotoesConversa(conversaAtual);
     renderizarConversas(); atualizarEstatisticas();
   } catch (_) {}
@@ -1281,7 +1308,7 @@ async function assumirConversa() {
     if (!resposta.ok) { alert(atualizada.erro || "Erro ao assumir conversa."); return; }
     conversas = conversas.map((c) => c.id === atualizada.id ? { ...c, ...atualizada } : c);
     conversaAtual = { ...conversaAtual, ...atualizada };
-    chatStatus.value = conversaAtual.status;
+    definirStatusDropdown(conversaAtual.status);
 
     // Desativa flag de humano pendente
     if (conversaAtual.solicitouHumano) {
@@ -1302,19 +1329,18 @@ async function assumirConversa() {
 }
 
 function rotuloStatusConversa(conversa) {
-  if (conversa?.status === "finalizada") return "⚪ Finalizada";
-  if (conversa?.status === "em_atendimento") return "🟢 Em atendimento";
-  return "🟡 Aguardando";
+  const status = conversa?.status === "finalizada" ? "finalizada" : conversa?.status === "em_atendimento" ? "em_atendimento" : "aguardando";
+  return `<span class="status-dot-indicador status-dot-${status}"></span>${STATUS_LABELS[status]}`;
 }
 
 function atualizarInfoAtendente(conversa) {
   if (!chatAtendenteInfo) return;
   const status = rotuloStatusConversa(conversa);
   const sufixoMotivo = conversa?.status === "finalizada" && conversa?.motivoFinalizacaoNome
-    ? ` • Motivo: ${conversa.motivoFinalizacaoNome}`
+    ? ` • Motivo: ${escaparHTML(conversa.motivoFinalizacaoNome)}`
     : "";
-  if (conversa?.atendenteNome) { chatAtendenteInfo.textContent = `${status} • Atendente: ${conversa.atendenteNome}${sufixoMotivo}`; chatAtendenteInfo.classList.add("com-atendente"); }
-  else { chatAtendenteInfo.textContent = `${status} • Sem atendente${sufixoMotivo}`; chatAtendenteInfo.classList.remove("com-atendente"); }
+  if (conversa?.atendenteNome) { chatAtendenteInfo.innerHTML = `${status} • Atendente: ${escaparHTML(conversa.atendenteNome)}${sufixoMotivo}`; chatAtendenteInfo.classList.add("com-atendente"); }
+  else { chatAtendenteInfo.innerHTML = `${status} • Sem atendente${sufixoMotivo}`; chatAtendenteInfo.classList.remove("com-atendente"); }
 
   // Banner de humano pendente
   const bannerExistente = document.getElementById("chatHumanoBanner");
@@ -1558,7 +1584,7 @@ async function transferirConversa(atendenteId, nome) {
     if (!resposta.ok) { mostrarErroTransferir(dados.erro || "Erro ao transferir."); return; }
     conversas = conversas.map((c) => c.id === dados.id ? { ...c, ...dados } : c);
     conversaAtual = { ...conversaAtual, ...dados };
-    chatStatus.value = conversaAtual.status;
+    definirStatusDropdown(conversaAtual.status);
     atualizarInfoAtendente(conversaAtual); atualizarBotoesConversa(conversaAtual);
     renderizarConversas(); atualizarEstatisticas(); fecharModalTransferir();
     if (window.AVSEGNotify) AVSEGNotify.toast(`Conversa transferida para ${nome}`, "sucesso");
@@ -1580,7 +1606,7 @@ function configurarSocket() {
     conversas = conversas.map((c) => c.id === conversaAtualizada.id ? { ...c, ...conversaAtualizada } : c);
     if (conversaAtual?.id === conversaAtualizada.id) {
       conversaAtual = { ...conversaAtual, ...conversaAtualizada };
-      chatStatus.value = conversaAtual.status;
+      definirStatusDropdown(conversaAtual.status);
       atualizarInfoAtendente(conversaAtual); atualizarBotoesConversa(conversaAtual);
       renderizarEtiquetasNoChat(conversaAtual);
     }
@@ -1758,6 +1784,15 @@ function configurarEventos() {
     const btnMotivoFinalizar = e.target.closest(".motivo-finalizar-item");
     if (btnMotivoFinalizar) { finalizarComMotivo(btnMotivoFinalizar.dataset.id); return; }
 
+    const statusItem = e.target.closest(".status-dropdown-item");
+    if (statusItem) {
+      definirStatusDropdown(statusItem.dataset.value);
+      chatStatus.dispatchEvent(new Event("change"));
+      fecharStatusDropdown();
+      return;
+    }
+    if (!e.target.closest("#statusDropdownWrapper")) fecharStatusDropdown();
+
     const btnTransferirAt = e.target.closest(".transferir-atendente-item");
     if (btnTransferirAt) { transferirConversa(btnTransferirAt.dataset.id, btnTransferirAt.dataset.nome); return; }
 
@@ -1801,6 +1836,12 @@ function configurarEventos() {
   document.getElementById("btnFecharFinalizar")?.addEventListener("click", fecharModalFinalizar);
   document.getElementById("btnConfirmarFinalizarSemMotivo")?.addEventListener("click", () => finalizarComMotivo(null));
   document.getElementById("modalFinalizar")?.addEventListener("click", (e) => { if (e.target === document.getElementById("modalFinalizar")) fecharModalFinalizar(); });
+
+  document.getElementById("statusDropdownBtn")?.addEventListener("click", () => {
+    const wrapper = document.getElementById("statusDropdownWrapper");
+    if (wrapper?.classList.contains("aberto")) fecharStatusDropdown();
+    else abrirStatusDropdown();
+  });
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") { fecharModalImagem(); fecharModalAtendentes(); fecharModalTransferir(); fecharModalEtiquetas(); fecharDropdownEtiquetas(); fecharPainelClienteInfo(); fecharMenuChatMobile(); }

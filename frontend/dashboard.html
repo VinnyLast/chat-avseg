@@ -173,11 +173,28 @@
           </div>
 
           <div class="chat-header-actions">
-            <select id="chatStatus" class="status-select">
-              <option value="aguardando">Aguardando</option>
-              <option value="em_atendimento">Em Atendimento</option>
-              <option value="finalizada">Finalizada</option>
-            </select>
+            <div class="status-dropdown-wrapper" id="statusDropdownWrapper">
+              <button type="button" id="statusDropdownBtn" class="status-dropdown-btn">
+                <span class="status-dot-indicador status-dot-aguardando" id="statusDropdownDot"></span>
+                <span id="statusDropdownLabel">Aguardando</span>
+              </button>
+              <div id="statusDropdownList" class="status-dropdown-list" style="display:none;">
+                <button type="button" class="status-dropdown-item" data-value="aguardando">
+                  <span class="status-dot-indicador status-dot-aguardando"></span>Aguardando
+                </button>
+                <button type="button" class="status-dropdown-item" data-value="em_atendimento">
+                  <span class="status-dot-indicador status-dot-em_atendimento"></span>Em Atendimento
+                </button>
+                <button type="button" class="status-dropdown-item" data-value="finalizada">
+                  <span class="status-dot-indicador status-dot-finalizada"></span>Finalizada
+                </button>
+              </div>
+              <select id="chatStatus" aria-hidden="true" tabindex="-1" style="display:none;">
+                <option value="aguardando">Aguardando</option>
+                <option value="em_atendimento">Em Atendimento</option>
+                <option value="finalizada">Finalizada</option>
+              </select>
+            </div>
             <button id="btnAtribuir" class="btn-secondary-small">Assumir</button>
             <button id="btnFinalizarConversa" class="btn-chat-action btn-finalizar" type="button">Finalizar</button>
             <button id="btnTransferirConversa" class="btn-chat-action btn-transferir" type="button">Transferir</button>
