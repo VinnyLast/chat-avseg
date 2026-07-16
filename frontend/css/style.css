@@ -601,6 +601,21 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(245, 196, 0, 0.28) transparent;
+}
+
+.chat-mensagens::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-mensagens::-webkit-scrollbar-thumb {
+    background: rgba(245, 196, 0, 0.28);
+    border-radius: 999px;
+}
+
+.chat-mensagens::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .mensagem {
@@ -660,6 +675,17 @@ body {
     resize: none;
     max-height: 120px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(245, 196, 0, 0.28) transparent;
+}
+
+#chatInput::-webkit-scrollbar {
+    width: 6px;
+}
+
+#chatInput::-webkit-scrollbar-thumb {
+    background: rgba(245, 196, 0, 0.28);
+    border-radius: 999px;
 }
 
 #chatInput:focus {
@@ -1297,6 +1323,17 @@ body.modal-aberto {
     border-radius: 18px;
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.75);
     padding: 24px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(245, 196, 0, 0.28) transparent;
+}
+
+.modal-card::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-card::-webkit-scrollbar-thumb {
+    background: rgba(245, 196, 0, 0.28);
+    border-radius: 999px;
 }
 
 .modal-header {
@@ -1702,6 +1739,17 @@ body.modal-aberto {
     border-radius: 16px;
     box-shadow: 0 18px 60px rgba(0, 0, 0, 0.65);
     padding: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(245, 196, 0, 0.28) transparent;
+}
+
+.templates-rapidos::-webkit-scrollbar {
+    width: 6px;
+}
+
+.templates-rapidos::-webkit-scrollbar-thumb {
+    background: rgba(245, 196, 0, 0.28);
+    border-radius: 999px;
 }
 
 .template-item {
@@ -3283,6 +3331,111 @@ body.modal-aberto {
   position: relative;
 }
 
+/* Botão "Responder" — só aparece no hover da mensagem */
+.btn-responder-mensagem {
+  position: absolute;
+  top: 2px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  z-index: 2;
+}
+
+.mensagem.cliente .btn-responder-mensagem { right: -34px; }
+.mensagem.atendente .btn-responder-mensagem { left: -34px; }
+
+.mensagem:hover .btn-responder-mensagem {
+  display: flex;
+}
+
+.btn-responder-mensagem:hover {
+  border-color: var(--yellow-border);
+  color: var(--primary);
+}
+
+@media (max-width: 900px) {
+  .btn-responder-mensagem { display: none !important; }
+}
+
+/* Citação dentro da bolha (mensagem que é resposta a outra) */
+.mensagem-citacao {
+  display: block;
+  margin-bottom: 6px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--primary);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 12.5px;
+}
+
+.mensagem-citacao strong {
+  display: block;
+  color: var(--primary);
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.mensagem-citacao span {
+  display: block;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mensagem.atendente .mensagem-citacao {
+  background: rgba(0, 0, 0, 0.15);
+  border-left-color: #050505;
+}
+.mensagem.atendente .mensagem-citacao strong {
+  color: #050505;
+}
+.mensagem.atendente .mensagem-citacao span {
+  color: rgba(5, 5, 5, 0.7);
+}
+
+/* Banner de "respondendo a" acima do input, igual ao do WhatsApp */
+.resposta-citada-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.resposta-citada-conteudo {
+  min-width: 0;
+  flex: 1;
+  border-left: 3px solid var(--primary);
+  padding-left: 10px;
+}
+
+.resposta-citada-conteudo strong {
+  display: block;
+  color: var(--primary);
+  font-size: 13px;
+}
+
+.resposta-citada-conteudo span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .mensagem.cliente .mensagem-conteudo {
   border-radius: 4px 18px 18px 18px;
   background: #1e1e1e;
@@ -3888,6 +4041,17 @@ body.modal-aberto {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 196, 0, 0.28) transparent;
+}
+
+.painel-cliente-info::-webkit-scrollbar {
+  width: 6px;
+}
+
+.painel-cliente-info::-webkit-scrollbar-thumb {
+  background: rgba(245, 196, 0, 0.28);
+  border-radius: 999px;
 }
 
 .painel-cliente-info.aberto {

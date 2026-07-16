@@ -158,6 +158,7 @@ function svgIcon(nome, tamanho = 18) {
     check:     `<svg viewBox="0 0 24 24" ${attrs}><path d="M20 6L9 17l-5-5"></path></svg>`,
     trash:     `<svg viewBox="0 0 24 24" ${attrs}><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`,
     info:      `<svg viewBox="0 0 24 24" ${attrs}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
+    responder: `<svg viewBox="0 0 24 24" ${attrs}><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>`,
   };
   return icons[nome] || icons.clip;
 }
@@ -846,6 +847,7 @@ async function abrirConversa(conversaId) {
   socket.emit("entrar_conversa", conversaAtual.id);
 
   if (modoNotaInterna) alternarModoNota();
+  cancelarResposta();
   fecharPainelClienteInfo();
   fecharMenuChatMobile();
 
@@ -872,6 +874,42 @@ async function abrirConversa(conversaId) {
 
 let mensagensCarregadas = [];
 let _offsetMensagens = 0;
+let respondendoAtual = null; // { id, autor, texto } — mensagem sendo respondida no momento
+
+function rotuloAutorMensagem(mensagem) {
+  if (mensagem.origem === "atendente") return "Você";
+  if (mensagem.origem === "sistema") return "Bot";
+  return conversaAtual?.clienteNome || "Associado";
+}
+
+function resumoTextoMensagem(mensagem) {
+  if (mensagem.texto && mensagem.texto.trim()) return mensagem.texto.trim().slice(0, 120);
+  if (mensagem.tipo === "imagem") return "📷 Imagem";
+  if (mensagem.tipo === "audio") return "🎤 Áudio";
+  if (mensagem.tipo === "video") return "🎬 Vídeo";
+  if (mensagem.arquivoUrl) return `📎 ${mensagem.nomeArquivo || "Arquivo"}`;
+  return "Mensagem";
+}
+
+function iniciarResposta(mensagemId) {
+  const mensagem = mensagensCarregadas.find((m) => m.id === mensagemId);
+  if (!mensagem) return;
+  respondendoAtual = { id: mensagem.id, autor: rotuloAutorMensagem(mensagem), texto: resumoTextoMensagem(mensagem) };
+
+  const banner = document.getElementById("respostaCitadaBanner");
+  if (banner) {
+    document.getElementById("respostaCitadaAutor").textContent = respondendoAtual.autor;
+    document.getElementById("respostaCitadaTexto").textContent = respondendoAtual.texto;
+    banner.style.display = "flex";
+  }
+  chatInput?.focus();
+}
+
+function cancelarResposta() {
+  respondendoAtual = null;
+  const banner = document.getElementById("respostaCitadaBanner");
+  if (banner) banner.style.display = "none";
+}
 
 function criarBotaoCarregarAnteriores(temMais) {
   const btn = document.createElement("button");
@@ -968,10 +1006,32 @@ function adicionarMensagemNaTela(mensagem) {
   // Classe explícita (não depende do seletor CSS :has(), sem suporte no Safari < 16.4 / iOS antigo)
   if (tipo === "imagem") div.classList.add("mensagem-com-imagem");
 
+  div.dataset.mensagemId = mensagem.id || "";
+
   const arquivoUrl  = mensagem.arquivoUrl  || "";
   const nomeArquivo = mensagem.nomeArquivo || "Arquivo enviado";
   const mimeType    = mensagem.mimeType    || "";
   let conteudo = "";
+
+  // Só mensagens do associado/atendente têm wamid de verdade — só essas
+  // conseguem virar uma resposta citada nativa no WhatsApp.
+  const podeResponder = mensagem.id && (mensagem.origem === "cliente" || mensagem.origem === "atendente");
+  const botaoResponder = podeResponder
+    ? `<button type="button" class="btn-responder-mensagem" title="Responder" aria-label="Responder">${svgIcon("responder", 15)}</button>`
+    : "";
+
+  let citacaoHTML = "";
+  if (mensagem.respondendoA) {
+    const original = mensagensCarregadas.find((m) => m.id === mensagem.respondendoA);
+    if (original) {
+      citacaoHTML = `
+        <div class="mensagem-citacao">
+          <strong>${escaparHTML(rotuloAutorMensagem(original))}</strong>
+          <span>${escaparHTML(resumoTextoMensagem(original))}</span>
+        </div>
+      `;
+    }
+  }
 
   if (tipo === "nota") {
     conteudo = `<p class="nota-interna-label">🔒 Nota interna</p><p class="mensagem-texto">${escaparHTML(mensagem.texto || "")}</p>`;
@@ -991,7 +1051,7 @@ function adicionarMensagemNaTela(mensagem) {
     conteudo = `<p class="mensagem-texto">${escaparHTML(mensagem.texto || "")}</p>`;
   }
 
-  div.innerHTML = `<div class="mensagem-conteudo">${conteudo}<span class="mensagem-hora">${formatarHora(mensagem.criadoEm)}</span></div>`;
+  div.innerHTML = `${botaoResponder}<div class="mensagem-conteudo">${citacaoHTML}${conteudo}<span class="mensagem-hora">${formatarHora(mensagem.criadoEm)}</span></div>`;
   chatMensagens.appendChild(div);
 }
 
@@ -1138,6 +1198,7 @@ function togglePainelClienteInfo() {
 
 function alternarModoNota() {
   modoNotaInterna = !modoNotaInterna;
+  if (modoNotaInterna) cancelarResposta();
   btnNotaInterna?.classList.toggle("ativo", modoNotaInterna);
   chatInputContainer?.classList.toggle("modo-nota", modoNotaInterna);
   chatInput.placeholder = modoNotaInterna
@@ -1252,10 +1313,11 @@ async function enviarMensagem() {
     if (arquivoSelecionado) arquivo = await uploadArquivoSelecionado();
     const payload = { texto };
     if (arquivo) { payload.tipo = arquivo.tipo; payload.arquivoUrl = arquivo.arquivoUrl; payload.mimeType = arquivo.mimeType; payload.nomeArquivo = arquivo.nomeArquivo; }
+    if (respondendoAtual) payload.respondendoA = respondendoAtual.id;
     const resposta = await fetch(`${API_URL}/api/conversas/${conversaAtual.id}/mensagens`, { method: "POST", headers: authHeaders(), body: JSON.stringify(payload) });
     const dados = await resposta.json();
     if (!resposta.ok) { alert(dados.erro || "Erro ao enviar mensagem."); return; }
-    chatInput.value = ""; limparAnexo(); esconderTemplatesRapidos(); ajustarAlturaTextarea();
+    chatInput.value = ""; limparAnexo(); esconderTemplatesRapidos(); ajustarAlturaTextarea(); cancelarResposta();
     await carregarConversas();
   } catch (erro) {
     alert(erro.message || "Erro de conexão ao enviar mensagem.");
@@ -1798,6 +1860,11 @@ function configurarEventos() {
     const btnMotivoFinalizar = e.target.closest(".finalizar-dropdown-item");
     if (btnMotivoFinalizar) { finalizarComMotivo(btnMotivoFinalizar.dataset.id || null); return; }
     if (!e.target.closest("#finalizarDropdown") && !e.target.closest("#btnFinalizarConversa") && !e.target.closest("#menuItemFinalizar")) fecharDropdownFinalizar();
+
+    const btnResponder = e.target.closest(".btn-responder-mensagem");
+    if (btnResponder) { iniciarResposta(btnResponder.closest(".mensagem")?.dataset.mensagemId); return; }
+
+    if (e.target.closest("#btnCancelarResposta")) { cancelarResposta(); return; }
 
     const statusItem = e.target.closest(".status-dropdown-item");
     if (statusItem) {

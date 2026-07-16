@@ -130,6 +130,8 @@ function mapearMensagem(row) {
     usuarioId: row.usuarioId || null,
     lida: row.lida === 1 || row.lida === true,
     privado: row.privado === 1 || row.privado === true,
+    whatsappMessageId: row.whatsappMessageId || null,
+    respondendoA: row.respondendoA || null,
     criadoEm: row.criadoEm,
   };
 }
@@ -211,12 +213,14 @@ function inserirMensagemEAtualizarConversa(msg) {
     usuarioId: msg.usuarioId || null,
     lida: msg.lida ? 1 : 0,
     privado: msg.privado ? 1 : 0,
+    whatsappMessageId: msg.whatsappMessageId || null,
+    respondendoA: msg.respondendoA || null,
     criadoEm: msg.criadoEm,
   };
 
   db.prepare(`
-    INSERT INTO mensagens (id, conversaId, tipo, texto, arquivoUrl, mimeType, nomeArquivo, origem, usuarioId, lida, privado, criadoEm)
-    VALUES (@id, @conversaId, @tipo, @texto, @arquivoUrl, @mimeType, @nomeArquivo, @origem, @usuarioId, @lida, @privado, @criadoEm)
+    INSERT INTO mensagens (id, conversaId, tipo, texto, arquivoUrl, mimeType, nomeArquivo, origem, usuarioId, lida, privado, whatsappMessageId, respondendoA, criadoEm)
+    VALUES (@id, @conversaId, @tipo, @texto, @arquivoUrl, @mimeType, @nomeArquivo, @origem, @usuarioId, @lida, @privado, @whatsappMessageId, @respondendoA, @criadoEm)
   `).run(linha);
 
   const incrementoNaoLida = linha.origem === "cliente" && linha.lida === 0 ? 1 : 0;
@@ -644,14 +648,22 @@ app.post("/api/conversas/:id/notas", autenticar, (req, res) => {
 });
 
 app.post("/api/conversas/:id/mensagens", autenticar, async (req, res) => {
-  const { texto, tipo, arquivoUrl, mimeType, nomeArquivo } = req.body;
+  const { texto, tipo, arquivoUrl, mimeType, nomeArquivo, respondendoA } = req.body;
   if (!texto && !arquivoUrl) return res.status(400).json({ erro: "Texto ou arquivo é obrigatório" });
 
   const conversa = db.prepare("SELECT * FROM conversas WHERE id = ?").get(req.params.id);
   if (!conversa) return res.status(404).json({ erro: "Conversa não encontrada" });
   if (conversa.status === "finalizada") return res.status(400).json({ erro: "Conversa finalizada. Reabra antes de responder." });
 
-  const novaMensagem = inserirMensagemEAtualizarConversa({
+  // Se está respondendo a uma mensagem específica, busca o wamid dela pra
+  // pedir ao bot que mande como resposta citada de verdade no WhatsApp.
+  let wamidRespondido = null;
+  if (respondendoA) {
+    const original = db.prepare("SELECT whatsappMessageId FROM mensagens WHERE id = ? AND conversaId = ?").get(respondendoA, conversa.id);
+    wamidRespondido = original?.whatsappMessageId || null;
+  }
+
+  let novaMensagem = inserirMensagemEAtualizarConversa({
     id: gerarId(),
     conversaId: conversa.id,
     tipo: tipo || detectarTipoPorMime(mimeType || "") || "texto",
@@ -662,6 +674,7 @@ app.post("/api/conversas/:id/mensagens", autenticar, async (req, res) => {
     origem: "atendente",
     usuarioId: req.usuario.id,
     lida: true,
+    respondendoA: respondendoA || null,
     criadoEm: new Date().toISOString(),
   });
 
@@ -671,14 +684,21 @@ app.post("/api/conversas/:id/mensagens", autenticar, async (req, res) => {
 
   try {
     const axios = require("axios");
-    await axios.post(`${WHATSAPP_API_URL}/enviar-mensagem`, {
+    const respostaBot = await axios.post(`${WHATSAPP_API_URL}/enviar-mensagem`, {
       telefone: conversa.telefone,
       texto: texto || "",
       tipo: novaMensagem.tipo,
       arquivoUrl: novaMensagem.arquivoUrl,
       mimeType: novaMensagem.mimeType,
       nomeArquivo: novaMensagem.nomeArquivo,
+      responderAoWhatsappId: wamidRespondido || undefined,
     }, { headers: { "x-api-key": INTERNAL_API_KEY } });
+
+    const wamidNovo = respostaBot.data?.whatsappMessageId;
+    if (wamidNovo) {
+      db.prepare("UPDATE mensagens SET whatsappMessageId = ? WHERE id = ?").run(wamidNovo, novaMensagem.id);
+      novaMensagem = { ...novaMensagem, whatsappMessageId: wamidNovo };
+    }
   } catch (_) {}
 
   io.emit("nova_mensagem", { conversaId: conversa.id, mensagem: novaMensagem });
@@ -940,7 +960,7 @@ app.post("/api/webhook/whatsapp", (req, res) => {
   const apiKey = req.headers["x-api-key"];
   if (INTERNAL_API_KEY && apiKey !== INTERNAL_API_KEY) return res.status(401).json({ erro: "API key inválida" });
 
-  const { telefone, mensagem, nomeCliente, tipo, arquivoUrl, mimeType, nomeArquivo, solicitouHumano, origemMsg } = req.body;
+  const { telefone, mensagem, nomeCliente, tipo, arquivoUrl, mimeType, nomeArquivo, solicitouHumano, origemMsg, whatsappMessageId, respondendoAoWhatsappId } = req.body;
   const textoMsg = String(mensagem || '').trim().toLowerCase();
   const pedidoHumano = solicitouHumano === true || textoMsg === '5';
   // Chamada "só sinaliza humano" — usada pela IA do bot quando detecta que o associado
@@ -1003,10 +1023,16 @@ app.post("/api/webhook/whatsapp", (req, res) => {
 
     conversaId = conversa.id;
     if (!apenasSinalizarHumano) {
+      let respondendoA = null;
+      if (respondendoAoWhatsappId) {
+        const original = db.prepare("SELECT id FROM mensagens WHERE whatsappMessageId = ?").get(respondendoAoWhatsappId);
+        respondendoA = original?.id || null;
+      }
       mensagemInserida = inserirMensagemEAtualizarConversa({
         id: gerarId(), conversaId: conversa.id, tipo: tipo || detectarTipoPorMime(mimeType || "") || "texto",
         texto: mensagem || "", arquivoUrl: arquivoUrl || null, mimeType: mimeType || null, nomeArquivo: nomeArquivo || null,
-        origem: ehMensagemBot ? "sistema" : "cliente", privado: ehMensagemBot, lida: ehMensagemBot, criadoEm: agora,
+        origem: ehMensagemBot ? "sistema" : "cliente", privado: ehMensagemBot, lida: ehMensagemBot,
+        whatsappMessageId: whatsappMessageId || null, respondendoA, criadoEm: agora,
       });
     }
   });

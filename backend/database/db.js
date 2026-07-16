@@ -120,4 +120,8 @@ if (!colunasUsuarios.includes("resetTokenExpira")) db.exec("ALTER TABLE usuarios
 const colunasConversas = db.prepare("PRAGMA table_info(conversas)").all().map((c) => c.name);
 if (!colunasConversas.includes("motivoFinalizacaoId")) db.exec("ALTER TABLE conversas ADD COLUMN motivoFinalizacaoId TEXT");
 
+const colunasMensagens = db.prepare("PRAGMA table_info(mensagens)").all().map((c) => c.name);
+if (!colunasMensagens.includes("whatsappMessageId")) db.exec("ALTER TABLE mensagens ADD COLUMN whatsappMessageId TEXT");
+if (!colunasMensagens.includes("respondendoA")) db.exec("ALTER TABLE mensagens ADD COLUMN respondendoA TEXT");
+
 module.exports = db;
