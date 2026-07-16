@@ -585,36 +585,50 @@ async function excluirMotivo(id, nome) {
 // FINALIZAR CONVERSA — SELEÇÃO DE MOTIVO
 // =============================================================================
 
-function abrirModalFinalizar() {
-  const modal = document.getElementById("modalFinalizar");
-  if (!modal) return;
-  modal.style.display = "flex";
-  carregarMotivosParaFinalizar();
+// Dropdown ancorado no botão "Finalizar" (mesmo padrão do abrirDropdownEtiquetas
+// e do dropdown de status) — funciona tanto a partir do botão do desktop quanto
+// do item do menu "..." no mobile, sem precisar de modal/aba separada.
+function abrirDropdownFinalizar(triggerEl) {
+  fecharDropdownFinalizar();
+
+  const trigger = triggerEl || btnFinalizarConversa;
+  if (!trigger || !conversaAtual) return;
+
+  const dropdown = document.createElement("div");
+  dropdown.className = "status-dropdown-list finalizar-dropdown";
+  dropdown.id = "finalizarDropdown";
+  dropdown.innerHTML = `<div class="loading">Carregando motivos...</div>`;
+  document.body.appendChild(dropdown);
+
+  const rect = trigger.getBoundingClientRect();
+  dropdown.style.position = "fixed";
+  dropdown.style.top = `${rect.bottom + 6}px`;
+  const larguraMinima = 260;
+  let left = rect.left;
+  const maxLeft = window.innerWidth - larguraMinima - 10;
+  if (left > maxLeft) left = Math.max(10, maxLeft);
+  dropdown.style.left = `${left}px`;
+
+  carregarMotivosNoDropdownFinalizar(dropdown);
 }
 
-function fecharModalFinalizar() {
-  const modal = document.getElementById("modalFinalizar");
-  if (modal) modal.style.display = "none";
+function fecharDropdownFinalizar() {
+  document.getElementById("finalizarDropdown")?.remove();
 }
 
-async function carregarMotivosParaFinalizar() {
-  const lista = document.getElementById("listaMotivosFinalizar");
-  if (!lista) return;
-  lista.innerHTML = `<div class="loading">Carregando motivos...</div>`;
-
+async function carregarMotivosNoDropdownFinalizar(dropdown) {
   await carregarMotivos();
+  if (!dropdown.isConnected) return; // usuário já fechou antes de carregar
 
-  if (!todosMotivos.length) {
-    lista.innerHTML = `<div class="loading">Nenhum motivo cadastrado — use o botão abaixo.</div>`;
-    return;
-  }
-
-  lista.innerHTML = todosMotivos.map((m) => `
-    <button type="button" class="motivo-finalizar-item" data-id="${m.id}">
-      <span>${escaparHTML(m.nome)}</span>
-      ${svgIcon("chevron", 16)}
-    </button>
+  const itensMotivos = todosMotivos.map((m) => `
+    <button type="button" class="status-dropdown-item finalizar-dropdown-item" data-id="${m.id}">${escaparHTML(m.nome)}</button>
   `).join("");
+
+  dropdown.innerHTML = `
+    ${itensMotivos}
+    ${todosMotivos.length ? '<div class="finalizar-dropdown-separador"></div>' : ""}
+    <button type="button" class="status-dropdown-item finalizar-dropdown-item" data-id="">Finalizar sem motivo</button>
+  `;
 }
 
 // =============================================================================
@@ -1184,7 +1198,7 @@ function executarAcaoMenuChatMobile(acao, itemEl) {
     case "transferir": abrirModalTransferir(); break;
     case "info": abrirPainelClienteInfo(); break;
     case "nota": alternarModoNota(); break;
-    case "finalizar": finalizarConversa(); break;
+    case "finalizar": finalizarConversa(itemEl); break;
     case "reabrir": reabrirConversa(); break;
     case "excluir": excluirConversa(); break;
   }
@@ -1399,13 +1413,13 @@ function atualizarBotoesConversa(conversa) {
   }
 }
 
-async function finalizarConversa() {
+async function finalizarConversa(triggerEl) {
   if (!conversaAtual) return;
-  abrirModalFinalizar();
+  abrirDropdownFinalizar(triggerEl);
 }
 
 async function finalizarComMotivo(motivoId) {
-  fecharModalFinalizar();
+  fecharDropdownFinalizar();
   await atualizarStatus("finalizada", { motivoFinalizacaoId: motivoId || null });
 }
 
@@ -1724,7 +1738,7 @@ function configurarEventos() {
 
   chatStatus.addEventListener("change", () => atualizarStatus(chatStatus.value));
   btnAtribuir.addEventListener("click", assumirConversa);
-  btnFinalizarConversa?.addEventListener("click", finalizarConversa);
+  btnFinalizarConversa?.addEventListener("click", () => finalizarConversa(btnFinalizarConversa));
   btnReabrirConversa?.addEventListener("click", reabrirConversa);
   btnTransferirConversa?.addEventListener("click", abrirModalTransferir);
   document.getElementById("btnExcluirConversa")?.addEventListener("click", excluirConversa);
@@ -1781,8 +1795,9 @@ function configurarEventos() {
     const btnExcluirMot = e.target.closest(".btn-excluir-motivo");
     if (btnExcluirMot) { excluirMotivo(btnExcluirMot.dataset.id, btnExcluirMot.dataset.nome); return; }
 
-    const btnMotivoFinalizar = e.target.closest(".motivo-finalizar-item");
-    if (btnMotivoFinalizar) { finalizarComMotivo(btnMotivoFinalizar.dataset.id); return; }
+    const btnMotivoFinalizar = e.target.closest(".finalizar-dropdown-item");
+    if (btnMotivoFinalizar) { finalizarComMotivo(btnMotivoFinalizar.dataset.id || null); return; }
+    if (!e.target.closest("#finalizarDropdown") && !e.target.closest("#btnFinalizarConversa") && !e.target.closest("#menuItemFinalizar")) fecharDropdownFinalizar();
 
     const statusItem = e.target.closest(".status-dropdown-item");
     if (statusItem) {
@@ -1832,10 +1847,6 @@ function configurarEventos() {
   document.getElementById("btnFecharMotivos")?.addEventListener("click", fecharModalMotivos);
   document.getElementById("formNovoMotivo")?.addEventListener("submit", criarMotivo);
   document.getElementById("modalMotivos")?.addEventListener("click", (e) => { if (e.target === document.getElementById("modalMotivos")) fecharModalMotivos(); });
-
-  document.getElementById("btnFecharFinalizar")?.addEventListener("click", fecharModalFinalizar);
-  document.getElementById("btnConfirmarFinalizarSemMotivo")?.addEventListener("click", () => finalizarComMotivo(null));
-  document.getElementById("modalFinalizar")?.addEventListener("click", (e) => { if (e.target === document.getElementById("modalFinalizar")) fecharModalFinalizar(); });
 
   document.getElementById("statusDropdownBtn")?.addEventListener("click", () => {
     const wrapper = document.getElementById("statusDropdownWrapper");

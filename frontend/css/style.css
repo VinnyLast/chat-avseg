@@ -1817,39 +1817,15 @@ body.modal-aberto {
     transition: all 0.2s;
 }
 
-.motivo-finalizar-item {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 14px 16px;
-    background: #0f0f0f;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    color: var(--text-primary);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    text-align: left;
-    transition: all 0.2s;
+/* Dropdown de "Finalizar conversa" — reaproveita o visual do status-dropdown */
+.finalizar-dropdown {
+    min-width: 260px;
 }
 
-.motivo-finalizar-item svg {
-    flex-shrink: 0;
-    color: var(--text-secondary);
-    transition: transform 0.2s, color 0.2s;
-}
-
-.motivo-finalizar-item:hover {
-    border-color: var(--yellow-border);
-    background: var(--yellow-soft);
-    transform: translateY(-1px);
-}
-
-.motivo-finalizar-item:hover svg {
-    color: var(--primary);
-    transform: translateX(2px);
+.finalizar-dropdown-separador {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 2px;
 }
 
 .transferir-atendente-item:hover {
