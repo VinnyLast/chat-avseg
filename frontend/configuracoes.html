@@ -16,6 +16,7 @@
     /* ── VARIÁVEIS ── */
     :root {
       --yellow: #f5c400;
+      --yellow-texto: #f5c400;
       --yellow-dim: rgba(245,196,0,0.14);
       --yellow-border: rgba(245,196,0,0.32);
       --red: #ef4444;
@@ -32,6 +33,7 @@
     }
 
     [data-theme="light"] {
+      --yellow-texto: #8a6d00;
       --yellow-dim: rgba(212,169,0,0.10);
       --yellow-border: rgba(212,169,0,0.35);
       --bg: #f0f0f0;
@@ -40,6 +42,20 @@
       --border: rgba(0,0,0,0.1);
       --text: #111111;
       --muted: #666;
+      --red-texto: #c23636;
+      --verde-texto: #15803d;
+    }
+
+    /* #ff8a8a/#4ade80 foram calibrados pra contraste em fundo escuro — em fundo
+       claro ficam ilegíveis, então no tema claro usam tons mais escuros/saturados. */
+    [data-theme="light"] .btn-danger,
+    [data-theme="light"] .erro-inline,
+    [data-theme="light"] #toast.erro {
+      color: var(--red-texto) !important;
+    }
+
+    [data-theme="light"] #toast.sucesso {
+      color: var(--verde-texto) !important;
     }
 
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
@@ -69,7 +85,7 @@
       transition: all 0.18s;
     }
 
-    .btn-tema:hover { color: var(--yellow); border-color: var(--yellow-border); background: var(--yellow-dim); }
+    .btn-tema:hover { color: var(--yellow-texto); border-color: var(--yellow-border); background: var(--yellow-dim); }
 
     /* ── TOPBAR ── */
     .topbar {
@@ -101,7 +117,7 @@
       font-family: 'Syne', sans-serif;
       font-size: 20px;
       font-weight: 800;
-      color: var(--yellow);
+      color: var(--yellow-texto);
       letter-spacing: -0.5px;
     }
 
@@ -135,7 +151,7 @@
 
     .topbar-link.active {
       background: var(--yellow-dim);
-      color: var(--yellow);
+      color: var(--yellow-texto);
       border-color: var(--yellow-border);
     }
 
@@ -280,7 +296,7 @@
       left: 14px;
       top: 50%;
       transform: translateY(-50%);
-      color: var(--yellow);
+      color: var(--yellow-texto);
       font-family: 'DM Mono', monospace;
       font-weight: 700;
       font-size: 15px;
@@ -378,7 +394,7 @@
       transition: all 0.18s;
     }
 
-    .btn-edit:hover { border-color: var(--yellow-border); color: var(--yellow); background: var(--yellow-dim); }
+    .btn-edit:hover { border-color: var(--yellow-border); color: var(--yellow-texto); background: var(--yellow-dim); }
 
     /* ── LISTA DE TEMPLATES ── */
     #listaTemplates {
@@ -449,7 +465,7 @@
       font-family: 'DM Mono', monospace;
       font-size: 11px;
       font-weight: 500;
-      color: var(--yellow);
+      color: var(--yellow-texto);
       background: var(--yellow-dim);
       border: 1px solid var(--yellow-border);
       padding: 2px 8px;
@@ -507,7 +523,7 @@
       font-family: 'Syne', sans-serif;
       font-size: 20px;
       font-weight: 800;
-      color: var(--yellow);
+      color: var(--yellow-texto);
     }
 
     .btn-fechar-modal {
@@ -548,7 +564,7 @@
     #toast.visivel { opacity: 1; transform: translateX(-50%) translateY(0); }
     #toast.sucesso { border-color: rgba(34,197,94,0.4); color: #4ade80; background: rgba(34,197,94,0.1); }
     #toast.erro    { border-color: rgba(239,68,68,0.4); color: #ff8a8a; background: rgba(239,68,68,0.1); }
-    #toast.aviso   { border-color: var(--yellow-border); color: var(--yellow); background: var(--yellow-dim); }
+    #toast.aviso   { border-color: var(--yellow-border); color: var(--yellow-texto); background: var(--yellow-dim); }
 
     /* ── LOADING ── */
     .loading-state {
@@ -591,7 +607,7 @@
     .aba-btn:hover { color: var(--text); }
 
     .aba-btn.active {
-      color: var(--yellow);
+      color: var(--yellow-texto);
       border-bottom-color: var(--yellow);
     }
 
@@ -673,7 +689,7 @@
       padding: 16px 18px;
     }
 
-    .metrica-card .valor { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--yellow); }
+    .metrica-card .valor { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--yellow-texto); }
     .metrica-card .rotulo { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
     .metricas-grafico-wrap {

@@ -199,8 +199,18 @@
             <button id="btnFinalizarConversa" class="btn-chat-action btn-finalizar" type="button">Finalizar</button>
             <button id="btnTransferirConversa" class="btn-chat-action btn-transferir" type="button">Transferir</button>
             <button id="btnReabrirConversa" class="btn-chat-action btn-reabrir" type="button" style="display:none;">Reabrir</button>
-            <button id="btnToggleInfoCliente" class="btn-secondary-small" type="button" title="Informações do associado">ℹ️ Info</button>
-            <button id="btnExcluirConversa" class="btn-chat-action btn-excluir" type="button" title="Excluir conversa" style="display:none;">🗑️ Excluir</button>
+            <button id="btnToggleInfoCliente" class="btn-secondary-small" type="button" title="Informações do associado">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              Info
+            </button>
+            <button id="btnExcluirConversa" class="btn-chat-action btn-excluir" type="button" title="Excluir conversa" style="display:none;">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line>
+              </svg>
+              Excluir
+            </button>
 
             <!-- Menu "..." — só aparece no mobile, concentra as ações acima -->
             <button id="btnMenuChatMobile" class="btn-menu-chat-mobile" type="button" aria-label="Mais ações" title="Mais ações" aria-haspopup="true" aria-expanded="false">
@@ -215,28 +225,28 @@
           <!-- Dropdown de ações do menu "..." (mobile) -->
           <div id="menuChatMobile" class="menu-chat-mobile" style="display:none;">
             <button type="button" class="menu-chat-mobile-item" data-acao="assumir" id="menuItemAssumir">
-              <span class="menu-chat-mobile-icone">✅</span> Assumir conversa
+              <span class="menu-chat-mobile-icone"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg></span> Assumir conversa
             </button>
             <button type="button" class="menu-chat-mobile-item" data-acao="etiqueta" id="menuItemEtiqueta">
-              <span class="menu-chat-mobile-icone">🏷️</span> Adicionar etiqueta
+              <span class="menu-chat-mobile-icone"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg></span> Adicionar etiqueta
             </button>
             <button type="button" class="menu-chat-mobile-item" data-acao="transferir" id="menuItemTransferir">
-              <span class="menu-chat-mobile-icone">🔄</span> Transferir
+              <span class="menu-chat-mobile-icone"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 1l4 4-4 4"></path><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><path d="M7 23l-4-4 4-4"></path><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg></span> Transferir
             </button>
             <button type="button" class="menu-chat-mobile-item" data-acao="info" id="menuItemInfo">
-              <span class="menu-chat-mobile-icone">ℹ️</span> Informações do associado
+              <span class="menu-chat-mobile-icone"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg></span> Informações do associado
             </button>
             <button type="button" class="menu-chat-mobile-item" data-acao="nota" id="menuItemNota">
-              <span class="menu-chat-mobile-icone">📝</span> Nota interna
+              <span class="menu-chat-mobile-icone"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span> Nota interna
             </button>
             <button type="button" class="menu-chat-mobile-item menu-chat-mobile-item-perigo" data-acao="finalizar" id="menuItemFinalizar">
-              <span class="menu-chat-mobile-icone">✅</span> Finalizar conversa
+              <span class="menu-chat-mobile-icone"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9 12l2 2 4-4"></path></svg></span> Finalizar conversa
             </button>
             <button type="button" class="menu-chat-mobile-item" data-acao="reabrir" id="menuItemReabrir" style="display:none;">
-              <span class="menu-chat-mobile-icone">🔁</span> Reabrir conversa
+              <span class="menu-chat-mobile-icone"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></span> Reabrir conversa
             </button>
             <button type="button" class="menu-chat-mobile-item menu-chat-mobile-item-perigo" data-acao="excluir" id="menuItemExcluir" style="display:none;">
-              <span class="menu-chat-mobile-icone">🗑️</span> Excluir conversa
+              <span class="menu-chat-mobile-icone"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></span> Excluir conversa
             </button>
           </div>
         </div>
@@ -279,7 +289,9 @@
           </button>
 
           <button id="btnNotaInterna" class="btn-input-action" type="button" title="Nota interna (Ctrl+Alt+N)" aria-label="Nota interna">
-            📝
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
           </button>
 
           <textarea id="chatInput" placeholder="Digite sua mensagem... ou / para respostas rápidas" rows="1" maxlength="1000"></textarea>

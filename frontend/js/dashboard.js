@@ -58,7 +58,7 @@ function aplicarTema(tema) {
   localStorage.setItem("avseg_tema", tema);
   const icone = document.getElementById("iconeTema");
   const label = document.getElementById("labelTema");
-  if (icone) icone.textContent = tema === "light" ? "☀️" : "🌙";
+  if (icone) icone.innerHTML = svgIcon(tema === "light" ? "sol" : "lua", 15);
   if (label) label.textContent = tema === "light" ? "Tema claro" : "Tema escuro";
 }
 
@@ -87,7 +87,7 @@ function atualizarIndicadorHorario() {
   const el = document.getElementById("indicadorHorario");
   if (!el) return;
   const dentro = dentroDoHorarioAtendimento();
-  el.textContent = dentro ? "🟢 Dentro do horário" : "🔴 Fora do horário";
+  el.innerHTML = `<span class="indicador-horario-bolinha ${dentro ? "dentro" : "fora"}"></span>${dentro ? "Dentro do horário" : "Fora do horário"}`;
 }
 
 // =============================================================================
@@ -159,6 +159,11 @@ function svgIcon(nome, tamanho = 18) {
     trash:     `<svg viewBox="0 0 24 24" ${attrs}><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>`,
     info:      `<svg viewBox="0 0 24 24" ${attrs}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
     responder: `<svg viewBox="0 0 24 24" ${attrs}><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>`,
+    lua:       `<svg viewBox="0 0 24 24" ${attrs}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`,
+    sol:       `<svg viewBox="0 0 24 24" ${attrs}><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`,
+    nota:      `<svg viewBox="0 0 24 24" ${attrs}><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>`,
+    transferir: `<svg viewBox="0 0 24 24" ${attrs}><path d="M17 1l4 4-4 4"></path><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><path d="M7 23l-4-4 4-4"></path><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`,
+    reabrir:   `<svg viewBox="0 0 24 24" ${attrs}><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>`,
   };
   return icons[nome] || icons.clip;
 }

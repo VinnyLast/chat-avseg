@@ -3779,7 +3779,7 @@ body.modal-aberto {
    TEMA CLARO
    ============================================================================= */
 [data-theme="light"] {
-  --primary: #d4a900;
+  --primary: #8a6d00;
   --primary-hover: #f5c400;
   --bg-dark: #ece6d8;
   --bg-light: #f4f0e6;
@@ -3865,6 +3865,77 @@ body.modal-aberto {
 
 [data-theme="light"] ::-webkit-scrollbar-thumb {
   background: #c9bfa0;
+}
+
+/* -----------------------------------------------------------------------------
+   TEMA CLARO — cobertura de campos/itens que ficavam com fundo escuro fixo
+   (vindos de redesign.css/etiquetas.css/mobile-override.css, que não tinham
+   tratamento de tema nenhum) dentro de modais e listas administrativas.
+   ----------------------------------------------------------------------------- */
+[data-theme="light"] .form-group input,
+[data-theme="light"] .form-atendente input,
+[data-theme="light"] .form-atendente select,
+[data-theme="light"] .input-cor {
+  background: #ece7d9 !important;
+  border-color: #d8cfb8 !important;
+}
+
+[data-theme="light"] .user-info,
+[data-theme="light"] .stat-card,
+[data-theme="light"] .atendente-item,
+[data-theme="light"] .arquivo-btn,
+[data-theme="light"] .btn-icon,
+[data-theme="light"] .anexo-preview-card,
+[data-theme="light"] .transferir-atendente-item,
+[data-theme="light"] .etiqueta-admin-item,
+[data-theme="light"] .btn-voltar-mobile,
+[data-theme="light"] .filter-btn-mobile,
+[data-theme="light"] .btn-logout-mobile {
+  background: #ece7d9 !important;
+  border-color: #d8cfb8 !important;
+}
+
+[data-theme="light"] .status-dropdown-btn {
+  background: #ece7d9 !important;
+  border-color: #d8cfb8 !important;
+}
+
+[data-theme="light"] .status-dropdown-list,
+[data-theme="light"] .etiquetas-dropdown,
+[data-theme="light"] .menu-chat-mobile {
+  background: #fbf8f2 !important;
+  border-color: #ddd3ba !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+[data-theme="light"] #chatInput:focus {
+  background: #ece7d9 !important;
+  border-color: var(--primary) !important;
+}
+
+/* #ff8a8a/#93c5fd/#c084fc foram calibrados pra contraste em fundo escuro —
+   em fundo claro ficam ilegíveis (vêm de redesign.css/etiquetas.css/
+   humano-destaque.css/mobile-override.css, sem tratamento de tema nenhum). */
+[data-theme="light"] .erro-mensagem,
+[data-theme="light"] .btn-excluir-atendente,
+[data-theme="light"] .btn-finalizar,
+[data-theme="light"] .anexo-preview-remover,
+[data-theme="light"] .avseg-toast--erro,
+[data-theme="light"] .btn-excluir-etiqueta,
+[data-theme="light"] .menu-chat-mobile-item-perigo,
+[data-theme="light"] .badge-humano,
+[data-theme="light"] .conversas-secao-titulo.urgente,
+[data-theme="light"] .chat-humano-banner,
+[data-theme="light"] .conversa-item.humano-pendente .conversa-nome {
+  color: #c23636 !important;
+}
+
+[data-theme="light"] .btn-transferir {
+  color: #2563eb !important;
+}
+
+[data-theme="light"] .btn-admin-etiquetas {
+  color: #9333ea !important;
 }
 
 /* Transição suave ao alternar entre tema claro e escuro */
@@ -4021,6 +4092,23 @@ body.modal-aberto {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
+}
+
+.indicador-horario-bolinha {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.indicador-horario-bolinha.dentro {
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+}
+
+.indicador-horario-bolinha.fora {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
 }
 
 /* =============================================================================
