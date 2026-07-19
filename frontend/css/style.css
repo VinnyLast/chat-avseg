@@ -2151,9 +2151,12 @@ body.modal-aberto {
 .chat-vazio-content p {
     font-size: 16px;
     color: var(--text-secondary);
-}.sidebar {
+}
+
+.sidebar {
     overflow-y: auto;
     scrollbar-width: thin;
+    scrollbar-color: rgba(245, 196, 0, 0.24) transparent;
 }
 
 .sidebar::-webkit-scrollbar {

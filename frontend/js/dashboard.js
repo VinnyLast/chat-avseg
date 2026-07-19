@@ -534,7 +534,7 @@ async function carregarMotivosAdmin() {
   }
 
   lista.innerHTML = todosMotivos.map((m) => `
-    <div class="etiqueta-admin-item">
+    <div class="etiqueta-admin-item motivo-admin-item">
       <span class="etiqueta-admin-nome">${escaparHTML(m.nome)}</span>
       <div class="etiqueta-admin-acoes">
         <button class="btn-excluir-motivo" data-id="${m.id}" data-nome="${escaparHTML(m.nome)}">

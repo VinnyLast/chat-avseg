@@ -243,6 +243,10 @@
   border-color: rgba(255, 255, 255, 0.12);
 }
 
+.motivo-admin-item {
+  grid-template-columns: 1fr auto;
+}
+
 .etiqueta-admin-cor {
   width: 14px;
   height: 14px;
@@ -274,6 +278,24 @@
 }
 
 .btn-excluir-etiqueta:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-excluir-motivo {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ff8a8a;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn-excluir-motivo:hover {
   background: #ef4444;
   color: white;
 }
