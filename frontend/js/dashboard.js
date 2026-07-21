@@ -12,6 +12,13 @@ let _ultimaDataMensagem = null;
 let todasEtiquetas = []; // cache global de etiquetas
 let _somHumanoTocado = new Set(); // evita tocar som múltiplas vezes
 
+// Renderização incremental da lista de conversas — evita recriar milhares de
+// itens no DOM de uma vez se o volume crescer muito com o tempo. Carrega mais
+// conforme o atendente rola pra baixo, igual ao histórico de mensagens.
+let _limiteListaConversas = 60;
+let _assinaturaFiltroConversas = "";
+let _totalNormaisAtual = 0;
+
 const socket = io(API_URL);
 
 const userName = document.getElementById("userName");
@@ -800,7 +807,14 @@ function _renderizarItemConversa(conversa) {
 }
 
 function renderizarConversas() {
+  const assinatura = `${filtroAtual}|${filtroEtiqueta}|${buscaAtual}`;
+  if (assinatura !== _assinaturaFiltroConversas) {
+    _assinaturaFiltroConversas = assinatura;
+    _limiteListaConversas = 60;
+  }
+
   const { humanos, normais } = separarConversas();
+  _totalNormaisAtual = normais.length;
   const total = humanos.length + normais.length;
 
   if (!total) {
@@ -808,9 +822,11 @@ function renderizarConversas() {
     return;
   }
 
+  const normaisVisiveis = normais.slice(0, _limiteListaConversas);
+
   listaConversas.innerHTML = "";
 
-  // Seção prioritária — atendimento humano
+  // Seção prioritária — atendimento humano (sempre completa, nunca paginada)
   if (humanos.length) {
     const secaoHumano = document.createElement("div");
     secaoHumano.className = "conversas-secao-titulo urgente";
@@ -825,15 +841,27 @@ function renderizarConversas() {
     humanos.forEach((c) => listaConversas.appendChild(_renderizarItemConversa(c)));
   }
 
-  // Seção normal
-  if (normais.length) {
+  // Seção normal — renderizada aos poucos, mais itens entram ao rolar
+  if (normaisVisiveis.length) {
     if (humanos.length) {
       const secaoNormal = document.createElement("div");
       secaoNormal.className = "conversas-secao-titulo";
       secaoNormal.innerHTML = `Demais conversas`;
       listaConversas.appendChild(secaoNormal);
     }
-    normais.forEach((c) => listaConversas.appendChild(_renderizarItemConversa(c)));
+    normaisVisiveis.forEach((c) => listaConversas.appendChild(_renderizarItemConversa(c)));
+  }
+}
+
+// Carrega mais itens da lista de conversas ao rolar perto do fim, em vez de
+// renderizar tudo de uma vez — protege contra travamento se o volume crescer.
+function verificarScrollListaConversas() {
+  const pertoDoFim = listaConversas.scrollTop + listaConversas.clientHeight >= listaConversas.scrollHeight - 150;
+  if (pertoDoFim && _limiteListaConversas < _totalNormaisAtual) {
+    const scrollAntes = listaConversas.scrollTop;
+    _limiteListaConversas += 60;
+    renderizarConversas();
+    listaConversas.scrollTop = scrollAntes;
   }
 }
 
@@ -1792,6 +1820,7 @@ function configurarEventos() {
     if (e.target.closest("#btnCarregarAnteriores")) carregarMensagensAnteriores();
   });
   chatMensagens.addEventListener("scroll", verificarScrollTopoMensagens);
+  listaConversas.addEventListener("scroll", verificarScrollListaConversas);
 
   document.getElementById("btnToggleInfoCliente")?.addEventListener("click", togglePainelClienteInfo);
   document.getElementById("btnFecharInfoCliente")?.addEventListener("click", fecharPainelClienteInfo);
