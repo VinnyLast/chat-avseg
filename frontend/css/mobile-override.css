@@ -296,8 +296,8 @@ body,
   }
 
   .mensagem-hora {
-    font-size: 10px !important;
-    opacity: 0.6 !important;
+    font-size: 11px !important;
+    opacity: 0.85 !important;
     text-align: right !important;
     display: block !important;
   }

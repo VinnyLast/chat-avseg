@@ -4019,7 +4019,7 @@ body.modal-aberto {
    distinta da nota interna (escrita por humano) e do aviso de sistema
    compacto (transferência/finalização). */
 .mensagem.bot-espelho {
-  align-self: flex-start;
+  align-self: flex-end;
   max-width: 80%;
 }
 

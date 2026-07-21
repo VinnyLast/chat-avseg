@@ -879,6 +879,8 @@ async function abrirConversa(conversaId) {
 
 let mensagensCarregadas = [];
 let _offsetMensagens = 0;
+let _temMaisAntigas = false;
+let _carregandoAnteriores = false;
 let respondendoAtual = null; // { id, autor, texto } — mensagem sendo respondida no momento
 
 function rotuloAutorMensagem(mensagem) {
@@ -937,12 +939,14 @@ async function carregarMensagens(conversaId) {
   try {
     chatMensagens.innerHTML = `<div class="loading">Carregando mensagens...</div>`;
     _offsetMensagens = 0;
+    _temMaisAntigas = false;
     mensagensCarregadas = [];
     const resposta = await fetch(`${API_URL}/api/conversas/${conversaId}/mensagens?limite=50&offset=0`, { headers: authHeaders() });
     if (!resposta.ok) { chatMensagens.innerHTML = `<div class="loading">Erro ao carregar mensagens.</div>`; return; }
     const dados = await resposta.json();
     mensagensCarregadas = dados.mensagens || [];
     _offsetMensagens = mensagensCarregadas.length;
+    _temMaisAntigas = Boolean(dados.temMais);
     renderizarMensagensCarregadas(dados.temMais);
     rolarParaBaixo();
   } catch (_) {
@@ -951,7 +955,8 @@ async function carregarMensagens(conversaId) {
 }
 
 async function carregarMensagensAnteriores() {
-  if (!conversaAtual) return;
+  if (!conversaAtual || _carregandoAnteriores || !_temMaisAntigas) return;
+  _carregandoAnteriores = true;
   const btn = document.getElementById("btnCarregarAnteriores");
   if (btn) { btn.disabled = true; btn.textContent = "Carregando..."; }
   try {
@@ -960,6 +965,7 @@ async function carregarMensagensAnteriores() {
     const dados = await resposta.json();
     const antigas = dados.mensagens || [];
     _offsetMensagens += antigas.length;
+    _temMaisAntigas = Boolean(dados.temMais);
     mensagensCarregadas = [...antigas, ...mensagensCarregadas];
 
     const alturaAntes = chatMensagens.scrollHeight;
@@ -968,6 +974,16 @@ async function carregarMensagensAnteriores() {
   } catch (_) {
     const btnErro = document.getElementById("btnCarregarAnteriores");
     if (btnErro) { btnErro.disabled = false; btnErro.textContent = "Carregar mensagens anteriores"; }
+  } finally {
+    _carregandoAnteriores = false;
+  }
+}
+
+// Carrega mensagens mais antigas automaticamente ao rolar perto do topo,
+// sem depender só do clique manual no botão (conversas com muito histórico).
+function verificarScrollTopoMensagens() {
+  if (chatMensagens.scrollTop < 120 && _temMaisAntigas && !_carregandoAnteriores) {
+    carregarMensagensAnteriores();
   }
 }
 
@@ -1775,6 +1791,7 @@ function configurarEventos() {
   chatMensagens.addEventListener("click", (e) => {
     if (e.target.closest("#btnCarregarAnteriores")) carregarMensagensAnteriores();
   });
+  chatMensagens.addEventListener("scroll", verificarScrollTopoMensagens);
 
   document.getElementById("btnToggleInfoCliente")?.addEventListener("click", togglePainelClienteInfo);
   document.getElementById("btnFecharInfoCliente")?.addEventListener("click", fecharPainelClienteInfo);

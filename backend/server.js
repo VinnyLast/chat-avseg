@@ -366,7 +366,7 @@ app.post("/api/auth/login", (req, res) => {
 
   if (!bcrypt.compareSync(senha, usuario.senha)) return res.status(401).json({ erro: "Credenciais inválidas" });
 
-  const token = jwt.sign({ id: usuario.id, email: usuario.email, role: usuario.role }, JWT_SECRET, { expiresIn: "24h" });
+  const token = jwt.sign({ id: usuario.id, email: usuario.email, role: usuario.role }, JWT_SECRET, { expiresIn: "30d" });
   res.json({ token, usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, role: usuario.role } });
 });
 
@@ -474,6 +474,7 @@ app.patch("/api/conversas/:id", autenticar, async (req, res) => {
   let novoStatus = conversa.status;
   let novaFinalizadaEm = conversa.finalizadaEm;
   let novoMotivoFinalizacaoId = conversa.motivoFinalizacaoId;
+  let novoSolicitouHumano = conversa.solicitouHumano;
 
   if (assumir) {
     if (conversa.atendenteId && conversa.atendenteId !== req.usuario.id && conversa.status === "em_atendimento") {
@@ -489,6 +490,7 @@ app.patch("/api/conversas/:id", autenticar, async (req, res) => {
     if (status === "finalizada") {
       novaFinalizadaEm = new Date().toISOString();
       novoMotivoFinalizacaoId = motivoFinalizacaoId || null;
+      novoSolicitouHumano = 0;
     }
     if (status === "aguardando" || status === "em_atendimento") {
       novaFinalizadaEm = null;
@@ -499,8 +501,8 @@ app.patch("/api/conversas/:id", autenticar, async (req, res) => {
   if (atendenteId !== undefined) novoAtendenteId = atendenteId;
   const atualizadoEm = new Date().toISOString();
 
-  db.prepare("UPDATE conversas SET status = ?, atendenteId = ?, finalizadaEm = ?, motivoFinalizacaoId = ?, atualizadoEm = ? WHERE id = ?")
-    .run(novoStatus, novoAtendenteId, novaFinalizadaEm, novoMotivoFinalizacaoId, atualizadoEm, conversa.id);
+  db.prepare("UPDATE conversas SET status = ?, atendenteId = ?, finalizadaEm = ?, motivoFinalizacaoId = ?, solicitouHumano = ?, atualizadoEm = ? WHERE id = ?")
+    .run(novoStatus, novoAtendenteId, novaFinalizadaEm, novoMotivoFinalizacaoId, novoSolicitouHumano, atualizadoEm, conversa.id);
 
   const conversaAtualizada = conversaDetalhadaPorId(conversa.id);
   io.emit("conversa_atualizada", conversaAtualizada);
