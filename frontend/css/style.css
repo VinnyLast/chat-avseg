@@ -3354,6 +3354,12 @@ body.modal-aberto {
 .mensagem.cliente .btn-responder-mensagem { right: -34px; }
 .mensagem.atendente .btn-responder-mensagem { left: -34px; }
 
+/* O botão fica fora da caixa da mensagem (right/left negativo) — sem isso,
+   o mouse "sai" do :hover ao atravessar o vão até o botão, antes de conseguir
+   clicar. Padding+margin negativo estende a área de hover sem mexer no layout. */
+.mensagem.cliente { padding-right: 34px; margin-right: -34px; }
+.mensagem.atendente { padding-left: 34px; margin-left: -34px; }
+
 .mensagem:hover .btn-responder-mensagem {
   display: flex;
 }
@@ -3469,13 +3475,26 @@ body.modal-aberto {
 
 /* Hora fica no canto inferior direito */
 .mensagem-hora {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
   font-size: 11px;
   margin-top: 4px;
-  text-align: right;
   opacity: 0.6;
   user-select: none;
   letter-spacing: 0.02em;
+}
+
+/* Check de confirmação (estilo WhatsApp) — só em mensagens enviadas daqui */
+.mensagem-check {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.mensagem-check svg {
+  width: 13px;
+  height: 13px;
 }
 
 .mensagem.atendente .mensagem-hora {

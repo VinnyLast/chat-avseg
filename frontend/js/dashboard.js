@@ -127,6 +127,13 @@ function formatarHora(dataISO) {
   return data.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
+// Hora da mensagem dentro da conversa — sempre HH:mm, mesmo em dias antigos,
+// porque o separador de data ("Hoje"/"Ontem"/data) já indica o dia acima.
+function formatarHoraMensagem(dataISO) {
+  if (!dataISO) return "";
+  return new Date(dataISO).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
 function formatarTelefone(telefone) {
   const digitos = String(telefone || "").replace(/\D/g, "");
   if (digitos.startsWith("55") && digitos.length >= 12) {
@@ -1100,7 +1107,14 @@ function adicionarMensagemNaTela(mensagem) {
     conteudo = `<p class="mensagem-texto">${escaparHTML(mensagem.texto || "")}</p>`;
   }
 
-  div.innerHTML = `${botaoResponder}<div class="mensagem-conteudo">${citacaoHTML}${conteudo}<span class="mensagem-hora">${formatarHora(mensagem.criadoEm)}</span></div>`;
+  // Estilo WhatsApp: check de confirmação só em mensagens que saíram daqui
+  // (atendente ou espelho do bot) — mensagem do cliente nunca tem check.
+  const ehMensagemEnviada = mensagem.origem === "atendente" || ehRespostaBot;
+  const checkEnviado = ehMensagemEnviada
+    ? `<span class="mensagem-check">${svgIcon("check", 13)}</span>`
+    : "";
+
+  div.innerHTML = `${botaoResponder}<div class="mensagem-conteudo">${citacaoHTML}${conteudo}<span class="mensagem-hora">${formatarHoraMensagem(mensagem.criadoEm)}${checkEnviado}</span></div>`;
   chatMensagens.appendChild(div);
 }
 
